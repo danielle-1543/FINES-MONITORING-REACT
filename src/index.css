@@ -1,0 +1,79 @@
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    font: 14px/1.5 Arial, Helvetica, sans-serif;
+    color: #243047;
+    background: #f4f6fa;
+    color-scheme: light;
+}
+
+body {
+    margin: 0;
+}
+
+button, input, select {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+#root {
+    min-height: 100vh;
+}
+
+#root > main > header {
+    background: #172554;
+    color: white;
+    padding: 20px 30px;
+}
+
+#root > main > header h1 {
+    margin: 0 0 5px;
+    font-size: 23px;
+}
+
+#root > main > header p {
+    display: inline-block;
+    margin: 0 18px 0 0;
+    color: #dbeafe;
+}
+
+#root > main > nav {
+    padding: 12px 30px;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+#root > main > nav h2 {
+    display: none;
+}
+
+#root > main > nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#root > main > nav button {
+    border: 0;
+    background: transparent;
+    color: #334155;
+    padding: 4px 0;
+}
+
+#root > main > nav button:hover {
+    color: #1d4ed8;
+}
+
+#root > main:not(.account-page) > section {
+    max-width: 1400px;
+    margin: 24px auto;
+    padding: 20px 24px;
+}

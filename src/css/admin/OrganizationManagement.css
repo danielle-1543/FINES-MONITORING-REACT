@@ -1,0 +1,119 @@
+.organization-management .org-account-summary {
+    grid-template-columns: minmax(0,280px);
+}
+
+.org-account-summary article {
+    border-top: 3px solid #002b00;
+    box-shadow: 0 6px 18px #002b000a;
+}
+
+.organization-management .org-account-filters {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+}
+
+.org-account-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.org-account-status {
+    display: inline-block;
+    font-size: 10px;
+    padding: 5px 9px;
+    border: 1px solid #d8dfd4;
+    border-radius: 20px;
+    color: #687164;
+    background: #f4f6f2;
+}
+
+.org-account-status.active {
+    color: #24512b;
+    background: #eef6e9;
+    border-color: #d4e7ca;
+}
+
+.org-account-modal {
+    width: min(600px,calc(100vw - 32px));
+}
+
+.org-account-modal fieldset {
+    border: 1px solid #dce5d6;
+    border-radius: 10px;
+    padding: 18px;
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.org-account-modal legend {
+    font-size: 11px;
+    font-weight: 700;
+    color: #426039;
+    padding: 0 8px;
+}
+
+.org-account-fields {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 14px;
+}
+
+.org-account-note {
+    font-size: 12px;
+    color: #63715e;
+    margin: 0;
+}
+
+.org-account-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+@media(max-width:600px) {
+
+    .organization-management .org-account-summary, .organization-management .org-account-filters, .org-account-fields {
+        grid-template-columns: 1fr;
+    }
+}
+
+.org-program-choices {
+    display: grid;
+    gap: 8px;
+}
+
+.account-card .org-program-choices label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #dce5d6;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.account-card .org-program-choices label.is-selected {
+    background: #eff6e9;
+    border-color: #8aa67a;
+}
+
+.account-card .org-program-choices input {
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.org-program-choices strong, .org-program-choices small {
+    display: block;
+}
+
+.org-program-choices small {
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: normal;
+    color: #63715e;
+}

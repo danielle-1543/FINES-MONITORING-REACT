@@ -1,0 +1,131 @@
+.payment-form {
+    display: grid;
+    gap: 14px;
+    max-width: 600px;
+    margin-top: 18px;
+}
+
+.payment-form label {
+    display: grid;
+    gap: 7px;
+    font-weight: bold;
+}
+
+.payment-page input,.payment-page select,.payment-page textarea {
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+    max-width: 100%;
+}
+
+.payment-page button,.payment-receipt button {
+    background: #1d4ed8;
+    color: white;
+    border: 0;
+    border-radius: 6px;
+    padding: 9px 13px;
+    cursor: pointer;
+}
+
+.payment-page button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.payment-actions {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.payment-counts {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+}
+
+.payment-receipt {
+    width: min(650px,95vw);
+    max-height: 85vh;
+    overflow: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 24px;
+}
+
+.payment-receipt::backdrop {
+    background: #0f172a99;
+}
+
+.payment-receipt dl div {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 14px;
+    padding: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.payment-receipt dt {
+    text-transform: capitalize;
+    font-weight: bold;
+}
+
+.payment-receipt dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.gcash-test-qr {
+    text-align: center;
+    padding: 24px;
+    border: 1px solid #d4e1ce;
+    border-radius: 12px;
+    background: #f6faf3;
+}
+
+.gcash-test-label {
+    display: inline-block;
+    padding: 4px 9px;
+    border: 1px solid #c5d8bb;
+    border-radius: 20px;
+    color: #345a29;
+    font-size: 10px;
+    letter-spacing: 1px;
+    font-weight: 700;
+}
+
+.gcash-test-qr h4 {
+    margin: 14px 0 8px;
+}
+
+.gcash-test-qr img {
+    display: block;
+    margin: 12px auto;
+    width: min(240px,100%);
+    height: auto;
+    border-radius: 8px;
+}
+
+.gcash-test-qr p {
+    max-width: 360px;
+    margin: 14px auto;
+    font-size: 12px;
+    color: #64715d;
+}
+
+.gcash-test-qr strong {
+    display: block;
+    font-size: 24px;
+    color: #002b00;
+}
+
+.payment-total-note {
+    margin: 0;
+    padding: 12px;
+    border: 1px solid #d9e5d2;
+    border-radius: 8px;
+    background: #f5faf1;
+    font-size: 12px;
+}

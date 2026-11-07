@@ -1,0 +1,162 @@
+.student-content {
+    width: min(1200px,100%);
+    margin: auto;
+    padding: 28px 24px;
+}
+
+.student-summary {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 16px;
+    margin: 22px 0;
+}
+
+.student-summary article,.student-panel {
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: white;
+    padding: 20px;
+}
+
+.student-summary span {
+    display: block;
+    color: #64748b;
+}
+
+.student-summary strong {
+    display: block;
+    font-size: 28px;
+    margin-top: 10px;
+}
+
+.student-panel {
+    margin: 20px 0;
+}
+
+.student-panel h2 {
+    margin-top: 0;
+    font-size: 19px;
+}
+
+.student-table {
+    overflow-x: auto;
+}
+
+.student-table table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.student-table th,.student-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.student-table th {
+    background: #f8fafc;
+}
+
+.student-note {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.student-button {
+    display: inline-block;
+    background: #1d4ed8;
+    color: white;
+    border: 0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    text-decoration: none;
+    cursor: pointer;
+    font: inherit;
+}
+
+.student-button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.student-page-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.student-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    margin: 20px 0;
+}
+
+.student-filters label {
+    display: grid;
+    gap: 6px;
+    font-weight: bold;
+}
+
+.student-filters input {
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+    max-width: 100%;
+}
+
+.student-profile-card {
+    margin: 20px 0;
+    width: min(650px,100%);
+}
+
+.student-profile-links {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.student-profile-links button {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: #1d4ed8;
+    text-decoration: underline;
+    font: inherit;
+    cursor: pointer;
+}
+
+.student-profile-modal {
+    max-height: 88vh;
+    overflow: auto;
+    width: min(560px,calc(100% - 28px));
+    margin: auto;
+}
+
+.student-profile-modal::backdrop {
+    background: #0f172a99;
+}
+
+.student-qr img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 20px 0;
+}
+
+@media(max-width:600px) {
+
+    .student-content {
+        padding: 20px 12px;
+    }
+
+    .student-summary {
+        grid-template-columns: 1fr;
+    }
+}
