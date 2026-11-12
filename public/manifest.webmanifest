@@ -1,0 +1,18 @@
+{
+    "id": "/",
+    "name": "MinSU Fines Monitoring System",
+    "short_name": "MinSU Fines",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#111C0F",
+    "icons": [
+        {
+            "src": "/mindoro-state-university-logo.jpg",
+            "sizes": "1024x1024",
+            "type": "image/jpeg",
+            "purpose": "any"
+        }
+    ]
+}

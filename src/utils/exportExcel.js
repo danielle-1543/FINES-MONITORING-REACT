@@ -6,7 +6,7 @@ export function createExportWorkbook(result) {
     }), ...result.data.map(row => {
         return columns.map(([key]) => {
             const value = row[key]
-            return ['fine_amount', 'total_fine', 'amount', 'paid_amount', 'pending_amount', 'outstanding', 'total_violations', 'total_absences'].includes(key) && value !== null && value !== undefined ? Number(value) : String(value ?? '')
+            return ['fine_amount', 'total_fine', 'amount', 'paid_amount', 'pending_amount', 'outstanding', 'violation_fines', 'absence_fines'].includes(key) && value !== null && value !== undefined ? Number(value) : String(value ?? '')
         })
     })]
     const sheet = XLSX.utils.aoa_to_sheet(values)
@@ -24,7 +24,7 @@ export function createExportWorkbook(result) {
         values.push(totalRow)
     }
     columns.forEach(([key], column) => {
-        if (['fine_amount', 'total_fine', 'amount', 'paid_amount', 'pending_amount', 'outstanding'].includes(key)) {
+        if (['fine_amount', 'total_fine', 'amount', 'paid_amount', 'pending_amount', 'outstanding', 'violation_fines', 'absence_fines'].includes(key)) {
             for (let row = 1; row < values.length; row++) {
                 const cell = sheet[XLSX.utils.encode_cell({
                     r: row,

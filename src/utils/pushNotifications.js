@@ -7,10 +7,15 @@ export function getPushSDK() {
     }
 
     sdkPromise = new Promise((resolve, reject) => {
-        const appId = import.meta.env.VITE_ONESIGNAL_APP_ID
+        const appId = import.meta.env.VITE_ONESIGNAL_APP_ID?.trim()
 
         if (!appId) {
-            reject(new Error('The OneSignal App ID is missing.'))
+            reject(new Error('Notifications are not configured in this deployment. Set VITE_ONESIGNAL_APP_ID in the frontend build environment, then rebuild and redeploy.'))
+            return
+        }
+
+        if (!window.isSecureContext) {
+            reject(new Error('Notifications require HTTPS. Open the deployed HTTPS website; a phone accessing an HTTP local-network address cannot enable push.'))
             return
         }
 
@@ -154,7 +159,7 @@ export function syncPushIdentity(accessToken) {
 
             if (
                 result.data.app_id !==
-                import.meta.env.VITE_ONESIGNAL_APP_ID
+                import.meta.env.VITE_ONESIGNAL_APP_ID?.trim()
             ) {
                 throw new Error(
                     'The frontend and backend OneSignal App IDs do not match.'

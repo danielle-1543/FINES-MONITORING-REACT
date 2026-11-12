@@ -4,6 +4,7 @@ import { getPushSDK, rememberPushPreference, syncPushIdentity } from '../utils/p
 export default function PushNotificationSettings({ accessToken }) {
     const [sdk, setSdk] = useState(null)
     const [enabled, setEnabled] = useState(false)
+    const [permission, setPermission] = useState('unknown')
     const [busy, setBusy] = useState(true)
     const [error, setError] = useState('')
     const [message, setMessage] = useState('')
@@ -24,9 +25,10 @@ export default function PushNotificationSettings({ accessToken }) {
 
                 const update = () => {
                     if (!active) return
-
+                    const nativePermission = window.Notification?.permission
+                    setPermission(nativePermission || (oneSignal.Notifications.permission ? 'granted' : 'default'))
                     setEnabled(Boolean(
-                        oneSignal.Notifications.permission &&
+                        (nativePermission ? nativePermission === 'granted' : oneSignal.Notifications.permission) &&
                         oneSignal.User.PushSubscription.optedIn
                     ))
                 }
@@ -39,8 +41,12 @@ export default function PushNotificationSettings({ accessToken }) {
                     'permissionChange',
                     update
                 )
+                window.addEventListener('focus', update)
+                document.addEventListener('visibilitychange', update)
 
                 removeListeners = () => {
+                    window.removeEventListener('focus', update)
+                    document.removeEventListener('visibilitychange', update)
                     oneSignal.User.PushSubscription.removeEventListener(
                         'change',
                         update
@@ -82,12 +88,16 @@ export default function PushNotificationSettings({ accessToken }) {
                 setEnabled(false)
                 setMessage('Notifications are disabled on this browser.')
             } else {
-                await sdk.Notifications.requestPermission()
+                if (window.Notification?.permission !== 'granted') {
+                    await sdk.Notifications.requestPermission()
+                }
 
-                if (!sdk.Notifications.permission) {
-                    setMessage(
-                        'Notifications were not allowed. If blocked, open the site permissions beside the browser address bar, allow notifications, and reload.'
-                    )
+                const currentPermission = window.Notification?.permission || (sdk.Notifications.permission ? 'granted' : 'default')
+                setPermission(currentPermission)
+                if (currentPermission !== 'granted') {
+                    setMessage(currentPermission === 'denied'
+                        ? `This browser blocks notifications for ${window.location.hostname}. Allow notifications for this exact website in browser site settings, then reload. The phone’s general notification switch is separate.`
+                        : 'Permission has not been granted yet. Tap Enable notifications and accept the browser prompt. On iPhone/iPad, open the installed Home Screen app first.')
                     return
                 }
 
@@ -119,6 +129,10 @@ export default function PushNotificationSettings({ accessToken }) {
 
             <p>
                 Status: <strong>{enabled ? 'Enabled' : 'Disabled'}</strong>
+            </p>
+            <p>
+                Browser permission: <strong>{{ granted: 'Allowed', denied: 'Blocked', default: 'Not yet allowed', unknown: 'Checking' }[permission]}</strong>
+                <br />Website: {window.location.hostname}
             </p>
 
             <button
