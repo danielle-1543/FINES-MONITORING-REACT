@@ -1,3 +1,4 @@
+import { apiFetch } from '../utils/apiFetch'
 import { useCallback, useEffect, useState } from 'react'
 
 function formatDate(value) {
@@ -14,7 +15,7 @@ export default function StudentNotificationCenter({ accessToken, open, onUnreadC
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
     const request = useCallback(async (path, options = {}) => {
-        const response = await fetch(`/api/student/notifications${path}`, {
+        const response = await apiFetch(`/api/student/notifications${path}`, {
             ...options,
             cache: 'no-store',
             headers: {

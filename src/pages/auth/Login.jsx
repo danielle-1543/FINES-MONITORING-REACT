@@ -1,11 +1,10 @@
+import { apiFetch } from '../../utils/apiFetch'
 
 import PasswordInput from '../../components/PasswordInput'
 import { useState } from 'react'
 import { trackEvent } from '../../config/posthog'
 import '../../css/auth/Account.css'
 
-// Get the deployed API URL from the Vite environment variable.
-const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '')
 
 function Login({
     onLogin,
@@ -24,12 +23,8 @@ function Login({
         setLoading(true)
 
         try {
-            if (!API_URL) {
-                throw new Error('API URL is not configured. Check VITE_API_URL.')
-            }
-
-            // Send login request directly to the deployed PHP API.
-            const response = await fetch(`${API_URL}/auth/login`, {
+            // The shared API client uses the deployed backend or the local Vite proxy.
+            const response = await apiFetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

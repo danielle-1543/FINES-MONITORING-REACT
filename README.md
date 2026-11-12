@@ -27,7 +27,7 @@ Run `npm run dev`, then open `http://localhost:5174`. The fixed port matches the
 
 ## Deployment
 
-Build with `npm ci && npm run build` and publish `dist`. Configure the host to serve the React application for client routes and forward `/api` requests to the PHP backend. Vite's development proxy is not included in production.
+Build with `npm ci && npm run build` and publish `dist`. On Render, set `VITE_API_URL=https://fines-monitoring-api.onrender.com/api` in the frontend service before building. The shared API client routes all `/api` requests to that backend, including login, session refresh, student management, payments, and push identity. An origin without `/api` is also accepted. Without this variable, requests stay relative for the local Vite proxy. Configure the frontend host to serve the React application for client routes. Environment changes require a new frontend build.
 
 Set public environment variables before building. Configure OneSignal for the deployed HTTPS origin and keep the frontend worker available at `/OneSignalSDKWorker.js`. Private PostHog reporting and OneSignal REST keys belong only on the PHP server.
 

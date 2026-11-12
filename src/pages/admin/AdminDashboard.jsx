@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/apiFetch'
 import StatisticsChart from '../../components/StatisticsChart'
 import AccountSettings from '../../components/AccountSettings'
 import { useEffect, useRef, useState } from 'react'
@@ -39,7 +40,7 @@ function SystemActivityAnalytics({ accessToken }) {
         async function load() {
             try {
                 const query = new URLSearchParams({ days, environment, refresh: refresh ? '1' : '0' })
-                const response = await fetch(`/api/admin/dashboard/analytics?${query}`, {
+                const response = await apiFetch(`/api/admin/dashboard/analytics?${query}`, {
                     headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}` },
                     cache: 'no-store', signal: controller.signal
                 })
@@ -157,7 +158,7 @@ function Overview({
 
                     page
                 })
-                const response = await fetch(`/api/admin/dashboard?${query}`, {
+                const response = await apiFetch(`/api/admin/dashboard?${query}`, {
                     headers: {
                         Authorization: `Bearer ${accessToken}`,
                         Accept: 'application/json'

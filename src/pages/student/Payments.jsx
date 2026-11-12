@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/apiFetch'
 import { confirmSensitive } from '../../utils/confirmation'
 import { money, date } from '../../utils/format'
 import { useEffect, useRef, useState } from 'react'
@@ -30,7 +31,7 @@ export default function Payments({
         lock = useRef(false)
     async function request(path, body) {
         await confirmSensitive(path, body)
-        const response = await fetch(`/api/${path}`, {
+        const response = await apiFetch(`/api/${path}`, {
             method: body === undefined ? 'GET' : 'POST',
             headers: {
                 Accept: 'application/json',
@@ -52,7 +53,7 @@ export default function Payments({
     }
     useEffect(() => {
         const controller = new AbortController()
-        fetch(`/api/${organization ? 'org/payments' : 'student/payments'}`, {
+        apiFetch(`/api/${organization ? 'org/payments' : 'student/payments'}`, {
             headers: {
                 Accept: 'application/json',
                 Authorization: `Bearer ${accessToken}`
@@ -127,7 +128,7 @@ export default function Payments({
     }
     async function getProof(id) {
         try {
-            const response = await fetch(`/api/payments/proof?id=${id}`, {
+            const response = await apiFetch(`/api/payments/proof?id=${id}`, {
                 headers: {
                     Authorization: `Bearer ${accessToken}`
                 }

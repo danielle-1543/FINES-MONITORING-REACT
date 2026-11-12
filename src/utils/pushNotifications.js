@@ -1,3 +1,4 @@
+import { apiFetch } from './apiFetch'
 let sdkPromise
 
 export function getPushSDK() {
@@ -133,7 +134,7 @@ export function syncPushIdentity(accessToken) {
         }
 
         try {
-            const response = await fetch('/api/student/push/identity', {
+            const response = await apiFetch('/api/student/push/identity', {
                 headers: {
                     Accept: 'application/json',
                     Authorization: `Bearer ${accessToken}`

@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/apiFetch'
 import { money, date } from '../../utils/format'
 import { useEffect, useState } from 'react'
 import '../../css/auth/Account.css'
@@ -54,7 +55,7 @@ export default function StudentAccount({
     }, [])
     useEffect(() => {
         const controller = new AbortController()
-        fetch('/api/student/dashboard', {
+        apiFetch('/api/student/dashboard', {
             headers: {
                 Accept: 'application/json',
                 Authorization: `Bearer ${accessToken}`

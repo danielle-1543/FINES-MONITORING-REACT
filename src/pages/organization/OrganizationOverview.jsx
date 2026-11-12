@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/apiFetch'
 import { money } from '../../utils/format'
 import { useEffect, useState } from 'react'
 function Table({
@@ -44,7 +45,7 @@ export default function OrganizationOverview({
     }, [])
     useEffect(() => {
         const controller = new AbortController()
-        fetch('/api/org/dashboard', {
+        apiFetch('/api/org/dashboard', {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 Accept: 'application/json'

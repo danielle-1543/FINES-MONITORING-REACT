@@ -1,3 +1,4 @@
+import { apiFetch } from './apiFetch'
 import { confirmSensitive } from './confirmation'
 
 export async function apiRequest(path, token, body, signal, {
@@ -6,7 +7,7 @@ export async function apiRequest(path, token, body, signal, {
 } = {}) {
     const hasBody = body !== undefined
     await confirmSensitive(path, body)
-    const response = await fetch(path, {
+    const response = await apiFetch(path, {
         method: hasBody ? 'POST' : 'GET',
         cache: 'no-store',
         signal,

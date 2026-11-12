@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/apiFetch'
 import { useEffect, useState } from 'react'
 import { confirmSensitive } from '../../utils/confirmation'
 const emptySchedule = {
@@ -19,7 +20,7 @@ export default function PaymentSchedules({
     const [version, setVersion] = useState(0)
     useEffect(() => {
         const controller = new AbortController()
-        fetch('/api/org/payments/periods', {
+        apiFetch('/api/org/payments/periods', {
             headers: {
                 Authorization: `Bearer ${accessToken}`
             },
@@ -56,7 +57,7 @@ export default function PaymentSchedules({
         setMessage('')
         try {
             await confirmSensitive('/api/org/payments/periods', form)
-            const response = await fetch('/api/org/payments/periods', {
+            const response = await apiFetch('/api/org/payments/periods', {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${accessToken}`,

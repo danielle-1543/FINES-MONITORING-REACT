@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/apiFetch'
 import { confirmSensitive } from '../../utils/confirmation'
 import PasswordInput from '../../components/PasswordInput'
 import { useEffect, useRef, useState } from 'react'
@@ -5,7 +6,7 @@ import { trackEvent } from '../../config/posthog'
 import '../../css/auth/Account.css'
 async function request(path, body) {
     await confirmSensitive(path, body)
-    const response = await fetch(`/api/student/activation/${path}`, {
+    const response = await apiFetch(`/api/student/activation/${path}`, {
         method: 'POST',
         headers: {
             Accept: 'application/json',

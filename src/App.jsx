@@ -1,3 +1,4 @@
+import { apiFetch } from './utils/apiFetch'
 import { askConfirmation } from './utils/confirmation'
 import { useEffect, useState } from 'react'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -57,7 +58,7 @@ export default function App() {
         let timer
         async function refresh() {
             try {
-                const response = await fetch('/api/auth/refresh', {
+                const response = await apiFetch('/api/auth/refresh', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -122,7 +123,7 @@ export default function App() {
         setNotice(typeof message === 'string' ? message : 'You have been logged out.')
         showActivation(false)
         if (refreshToken) {
-            fetch('/api/auth/logout', {
+            apiFetch('/api/auth/logout', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

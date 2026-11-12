@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/apiFetch'
 import { confirmSensitive } from '../../utils/confirmation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
@@ -95,7 +96,7 @@ function datePHT(value, detailed = false) {
 }
 async function req(url, token, method = 'GET', body = null) {
     await confirmSensitive(url, body)
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
         method,
         headers: {
             Accept: 'application/json',
