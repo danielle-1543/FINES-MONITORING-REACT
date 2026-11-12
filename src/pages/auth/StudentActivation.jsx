@@ -1,7 +1,10 @@
+import { confirmSensitive } from '../../utils/confirmation'
 import PasswordInput from '../../components/PasswordInput'
 import { useEffect, useRef, useState } from 'react'
+import { trackEvent } from '../../config/posthog'
 import '../../css/auth/Account.css'
 async function request(path, body) {
+    await confirmSensitive(path, body)
     const response = await fetch(`/api/student/activation/${path}`, {
         method: 'POST',
         headers: {
@@ -204,6 +207,9 @@ export default function StudentActivation({
             const result = await request('complete', {
                 ...pair,
                 ...form
+            })
+            trackEvent('account_activated', {
+                role: 'STUDENT'
             })
             if (mounted.current) {
                 setPair({

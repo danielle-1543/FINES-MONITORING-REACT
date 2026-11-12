@@ -1,17 +1,9 @@
+import { confirmSensitive } from '../../utils/confirmation'
+import { money, date } from '../../utils/format'
 import { useEffect, useRef, useState } from 'react'
 import { downloadExcel } from '../../utils/exportExcel'
 import '../../css/student/Payments.css'
-const money = value => {
-    return Number(value || 0).toLocaleString('en-PH', {
-        style: 'currency',
-        currency: 'PHP'
-    })
-}
-const date = value => {
-    return value ? new Date(value.replace(' ', 'T') + '+08:00').toLocaleString('en-PH', {
-        timeZone: 'Asia/Manila'
-    }) : '—'
-}
+import PaymentSchedules from '../organization/PaymentSchedules'
 export default function Payments({
     accessToken,
     organization = false,
@@ -37,6 +29,7 @@ export default function Payments({
     const dialog = useRef(null),
         lock = useRef(false)
     async function request(path, body) {
+        await confirmSensitive(path, body)
         const response = await fetch(`/api/${path}`, {
             method: body === undefined ? 'GET' : 'POST',
             headers: {
@@ -68,6 +61,9 @@ export default function Payments({
             signal: controller.signal
         }).then(async response => {
             const result = await response.json()
+
+
+            
             if (!response.ok || !result.success) {
                 throw new Error(result.message || result.error || 'Unable to load payments.')
             }
@@ -164,7 +160,7 @@ export default function Payments({
     if (!organization) {
         for (const fine of data.fines) {
             const cents = Math.round(Number(fine.available_to_claim) * 100)
-            if (cents <= 0) {
+            if (cents <= 0 || fine.payment_window !== 'OPEN' || data.fines.some(item => String(item.org_user_id) === String(fine.org_user_id) && Number(item.pending_amount) > 0)) {
                 continue
             }
             let group = payableGroups.find(item => {
@@ -186,13 +182,11 @@ export default function Payments({
     const allGroup = form.fine_key.startsWith('ALL:') ? payableGroups.find(group => {
         return String(group.org_user_id) === form.fine_key.slice(4)
     }) : null
-    const selected = !organization ? allGroup ? {
+    const selected = !organization && allGroup ? {
         ...allGroup,
         available_to_claim: (allGroup.cents / 100).toFixed(2)
-    } : data.fines.find(f => {
-        return f.fine_key === form.fine_key
-    }) : null
-    const enteredAmount = allGroup ? (allGroup.cents / 100).toFixed(2) : form.amount
+    } : null
+    const enteredAmount = allGroup ? (allGroup.cents / 100).toFixed(2) : ''
     return <section className="payment-page">
         <h2>{organization ? 'Payment Claim Review' : 'Payment Management'}</h2>
         {error && <p
@@ -212,8 +206,12 @@ export default function Payments({
                 })
             }}
         >Refresh</button>
+        {organization && <PaymentSchedules
+            accessToken={accessToken}
+            onChanged={onChanged}
+        />}
         {!organization && <>
-            <div className="student-summary">{[['Total Fines', data.summary.total_fines], ['Paid', data.summary.paid_amount], ['Outstanding', data.summary.outstanding]].map(([label, value]) => {
+            <div className="student-summary">{[['Total Fines', data.summary.total_fines], ['Amount Due after Reductions', data.summary.outstanding]].map(([label, value]) => {
                 return <article key={label}>
                     <span>{label}</span>
                     <strong>{money(value)}</strong>
@@ -226,25 +224,33 @@ export default function Payments({
                     onChange={e => {
                         return setFineStatus(e.target.value)
                     }}
-                >{['ALL', 'UNPAID', 'PARTIALLY_PAID', 'PAID'].map(v => {
+                >{['ALL', 'UNPAID', 'PAID'].map(v => {
                     return <option
                         key={v}
                         value={v}
                     >{v.replaceAll('_', ' ')}</option>
                 })}</select></label>
+                {Object.values(data.fines.reduce((groups, fine) => {
+                    const group = groups[fine.org_user_id] ||= { name: fine.organization_name, id: fine.org_user_id, fines: [] }
+                    group.fines.push(fine)
+                    return groups
+                }, {})).map(group => <section key={group.id}>
+                    <h3>{group.name}</h3>
                 <div className="student-table">
                     <table>
                         <thead>
                             <tr>
                                 <th>Fine / Organization</th>
                                 <th>Total</th>
+                                <th>Cap Reduction</th>
+                                <th>Discounts</th>
                                 <th>Paid</th>
                                 <th>Outstanding</th>
                                 <th>Pending Claims</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
-                        <tbody>{data.fines.filter(f => {
+                        <tbody>{group.fines.filter(f => {
                             return fineStatus === 'ALL' || f.payment_status === fineStatus
                         }).map(f => {
                             return <tr key={f.fine_key}>
@@ -252,8 +258,13 @@ export default function Payments({
                                     {f.violation_name || 'Violation'}
                                     <br />
                                     {f.organization_name}
+                                    <br />
+                                    <small>{f.semester_label || 'Semester not scheduled'} — {f.payment_window.replaceAll('_', ' ')}</small>
+                                    {f.opens_at && <small className="payment-window">Pay: {date(f.opens_at)} to {date(f.closes_at)}</small>}
                                 </td>
                                 <td>{money(f.fine_amount)}</td>
+                                <td>{money(f.cap_adjustment)}</td>
+                                <td>{money(f.discount_amount)}</td>
                                 <td>{money(f.paid_amount)}</td>
                                 <td>{money(f.outstanding)}</td>
                                 <td>{money(f.pending_amount)}</td>
@@ -261,12 +272,15 @@ export default function Payments({
                             </tr>
                         })}</tbody>
                     </table>
-                    {!data.fines.length && <p>No fines recorded.</p>}
+                    {!group.fines.length && <p>No fines recorded.</p>}
                 </div>
+                </section>)}
+                {!data.fines.length && <p>No fines recorded.</p>}
             </section>
             <section className="student-panel">
                 <h3>Submit a Payment Claim</h3>
-                <p>Pay one fine or all available fines for one organization. Your balance updates after that organization confirms receiving payment.</p>
+                <p>Pay the full payable balance for one organization during its payment window. Caps and discounts are applied automatically. Your balance updates after the organization confirms payment.</p>
+                {!payableGroups.length && <p>No fines are available for payment right now. Check the schedules above; pending claims already reserve their amounts.</p>}
                 <form
                     className="payment-form"
                     onSubmit={async e => {
@@ -311,37 +325,23 @@ export default function Payments({
                             })
                         }}
                     >
-                        <option value="">Select fines or organization</option>
+                        <option value="">Select organization</option>
                         <optgroup label="Pay all available fines per organization">{payableGroups.map(group => {
                             return <option
                                 key={group.org_user_id}
                                 value={`ALL:${group.org_user_id}`}
                             >{group.organization_name} — all {group.count} fines — {money(group.cents / 100)}</option>
                         })}</optgroup>
-                        <optgroup label="Pay an individual fine">{data.fines.filter(f => {
-                            return Number(f.available_to_claim) > 0
-                        }).map(f => {
-                            return <option
-                                key={f.fine_key}
-                                value={f.fine_key}
-                            >{f.organization_name} — {f.violation_name || 'Fine'} — available {money(f.available_to_claim)}</option>
-                        })}</optgroup>
                     </select></label>
-                    {allGroup && <p className="payment-total-note">Includes every payable attendance and violation fine for {allGroup.organization_name}. Amounts already covered by pending claims are excluded.</p>}
+                    {allGroup && <p className="payment-total-note">Includes every payable attendance and violation fine for {allGroup.organization_name}. Payment must cover the full payable balance for this organization.</p>}
                     <label>Amount (PHP)<input
                         type="number"
                         required
                         min="0.01"
                         step="0.01"
-                        readOnly={Boolean(allGroup)}
+                        readOnly
                         max={selected?.available_to_claim || '99999999.99'}
                         value={enteredAmount}
-                        onChange={e => {
-                            return setForm({
-                                ...form,
-                                amount: e.target.value
-                            })
-                        }}
                     /></label>
                     <label>Method<select
                         value={form.method}
@@ -422,8 +422,8 @@ export default function Payments({
                             <th>Organization / Fine</th>
                             <th>Amount</th>
                             <th>Method / Reference</th>
-                            <th>Submitted (PHT)</th>
-                            <th>Reviewed (PHT)</th>
+                            <th>Submitted</th>
+                            <th>Reviewed</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -553,7 +553,7 @@ export default function Payments({
                             amount: 'Amount (PHP)',
                             method: 'Method',
                             reference_number: 'Reference',
-                            reviewed_at: 'Confirmed At (PHT)'
+                            reviewed_at: 'Confirmed At'
                         },
                         data: [receipt]
                     }, `${receipt.receipt_number}.xlsx`)

@@ -1,3 +1,4 @@
+import { money, date } from '../../utils/format'
 import { useEffect, useState } from 'react'
 import '../../css/auth/Account.css'
 import '../../css/student/Dashboard.css'
@@ -6,17 +7,9 @@ import StudentQR from './StudentQR'
 import StudentHistory from './StudentHistory'
 import StudentProfile from './StudentProfile'
 import PortalLayout from '../../components/PortalLayout'
-const money = value => {
-    return Number(value || 0).toLocaleString('en-PH', {
-        style: 'currency',
-        currency: 'PHP'
-    })
-}
-function date(value) {
-    return value ? new Date(value.replace(' ', 'T') + '+08:00').toLocaleString('en-PH', {
-        timeZone: 'Asia/Manila'
-    }) : '—'
-}
+import PushNotificationSettings from '../../components/PushNotificationSettings'
+import StudentNotificationCenter from '../../components/StudentNotificationCenter'
+
 function Records({
     title,
     rows,
@@ -49,8 +42,16 @@ export default function StudentAccount({
 }) {
     const [data, setData] = useState(null)
     const [error, setError] = useState('')
-    const [page, setPage] = useState('dashboard')
+    const [page, setPage] = useState(() => window.location.hash === '#notifications' ? 'notifications' : 'dashboard')
     const [version, setVersion] = useState(0)
+    const [unreadCount, setUnreadCount] = useState(0)
+    useEffect(() => {
+        const navigate = () => {
+            if (window.location.hash === '#notifications') setPage('notifications')
+        }
+        window.addEventListener('hashchange', navigate)
+        return () => window.removeEventListener('hashchange', navigate)
+    }, [])
     useEffect(() => {
         const controller = new AbortController()
         fetch('/api/student/dashboard', {
@@ -88,14 +89,16 @@ export default function StudentAccount({
     }, [])
     return <PortalLayout
         role="Student"
+        badges={{ notifications: unreadCount }}
         account={user.username}
-        items={[['dashboard', 'Dashboard'], ['attendance', 'Attendance History'], ['violations', 'Violation History'], ['payments', 'Payments & Receipts'], ['profile', 'Profile']]}
+        items={[['dashboard', 'Dashboard'], ['notifications', 'Notifications'], ['attendance', 'Attendance History'], ['violations', 'Violation History'], ['payments', 'Payments & Receipts'], ['profile', 'Profile']]}
         page={page}
         onNavigate={setPage}
         onLogout={onLogout}
     >
         <div className="student-content">
-            {page === 'payments' ? <Payments
+            <StudentNotificationCenter accessToken={accessToken} open={page === 'notifications'} onUnreadChange={setUnreadCount} />
+            {page === 'notifications' ? null : page === 'payments' ? <Payments
                 accessToken={accessToken}
                 onChanged={() => {
                     return setVersion(v => {
@@ -113,7 +116,9 @@ export default function StudentAccount({
                     onAccountUpdated={onAccountUpdated}
                     onPasswordChanged={onLogout}
                 />
-            </div></> : error ? <p
+            </div>
+<PushNotificationSettings accessToken={accessToken} />
+            </> : error ? <p
                 role="alert"
                 className="account-error"
             >{error}</p> : !data ? <p>Loading your dashboard…</p> : <>
@@ -141,25 +146,25 @@ export default function StudentAccount({
                     title="Recent Attendance"
                     rows={data.recent_attendance}
                     empty="No attendance recorded yet."
-                    columns={[['event_name', 'Event'], ['organization_name', 'Organization'], ['attendance_status', 'Status'], ['recorded_at', 'Recorded At (PHT)', date]]}
+                    columns={[['event_name', 'Event'], ['organization_name', 'Organization'], ['attendance_status', 'Status'], ['recorded_at', 'Recorded At', date]]}
                 />
                 <Records
                     title="Recent Violations"
                     rows={data.recent_violations}
                     empty="No violations recorded."
-                    columns={[['violation_name', 'Violation'], ['event_name', 'Event'], ['organization_name', 'Organization'], ['fine_amount', 'Fine', money], ['recorded_at', 'Recorded At (PHT)', date]]}
+                    columns={[['violation_name', 'Violation'], ['event_name', 'Event'], ['organization_name', 'Organization'], ['fine_amount', 'Fine', money], ['recorded_at', 'Recorded At', date]]}
                 />
                 <Records
                     title="Recent Payments"
                     rows={data.recent_payments}
                     empty={data.payments_available ? 'No payments recorded.' : 'Payment records are not connected yet.'}
-                    columns={[['recorded_at', 'Date (PHT)', date], ['amount', 'Amount', money], ['method', 'Method']]}
+                    columns={[['recorded_at', 'Date', date], ['amount', 'Amount', money], ['method', 'Method']]}
                 />
                 <Records
                     title="Ongoing & Upcoming Organization Events"
                     rows={data.upcoming_events}
                     empty="No ongoing or upcoming events for your course or USG."
-                    columns={[['name', 'Event'], ['organization_name', 'Organization'], ['event_status', 'Status'], ['scan_starts_at', 'Starts (PHT)', date], ['scan_ends_at', 'Ends (PHT)', date]]}
+                    columns={[['name', 'Event'], ['organization_name', 'Organization'], ['event_status', 'Status'], ['scan_starts_at', 'Starts', date], ['scan_ends_at', 'Ends', date]]}
                 />
             </>}
         </div>

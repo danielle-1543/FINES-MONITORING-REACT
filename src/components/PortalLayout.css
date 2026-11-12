@@ -111,6 +111,19 @@
     flex-shrink: 0;
 }
 
+.portal-nav-badge {
+    margin-left: auto;
+    flex-shrink: 0;
+    min-width: 22px;
+    padding: 3px 7px;
+    border-radius: 20px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
 .portal-layout .portal-sidebar button:hover {
     background: #ffffff0d;
     color: white;

@@ -1,24 +1,10 @@
+import { apiRequest } from '../utils/apiRequest'
 import { useEffect, useRef, useState } from 'react'
 import PasswordInput from './PasswordInput'
-async function request(path, token, body, signal) {
-    const response = await fetch(`/api/account${path}`, {
-        method: body ? 'POST' : 'GET',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-            ...(body ? {
-                'Content-Type': 'application/json'
-            } : {})
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        cache: 'no-store',
-        signal
+function request(path, token, body, signal) {
+    return apiRequest(`/api/account${path}`, token, body || undefined, signal, {
+        failureMessage: 'Unable to load account.'
     })
-    const data = await response.json()
-    if (!response.ok || !data.success) {
-        throw new Error(data.message || data.error || 'Unable to load account.')
-    }
-    return data
 }
 function SettingsModal({
     data,

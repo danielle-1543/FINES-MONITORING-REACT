@@ -1,47 +1,25 @@
+import { apiRequest } from '../../utils/apiRequest'
+import { money } from '../../utils/format'
 import OrganizationOverview from './OrganizationOverview'
 import AccountSettings from '../../components/AccountSettings'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import '../../css/organization/Organization.css'
 import { downloadExcel } from '../../utils/exportExcel'
 import Payments from '../student/Payments'
-import OrganizationFines from './OrganizationFines'
+import StudentRecord from './StudentRecord'
 import PortalLayout from '../../components/PortalLayout'
-async function api(path, token, body, signal) {
-    const response = await fetch(`/api/org/${path}`, {
-        method: body === undefined ? 'GET' : 'POST',
-        headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${token}`,
-            ...(body === undefined ? {} : {
-                'Content-Type': 'application/json'
-            })
-        },
-        ...(body === undefined ? {} : {
-            body: JSON.stringify(body)
-        }),
-        cache: 'no-store',
-        signal
+function api(path, token, body, signal) {
+    return apiRequest(`/api/org/${path}`, token, body, signal, {
+        invalidResponseMessage: 'The API returned an invalid response.'
     })
-    const result = await response.json().catch(() => {
-        throw new Error('The API returned an invalid response.')
-    })
-    if (!response.ok || !result.success) {
-        throw new Error(result.message || result.error || 'Request failed.')
-    }
-    return result
 }
 const emptyEvent = {
     name: '',
     event_type: 'ATTENDANCE',
     violation_type_id: '',
+    absence_fine_amount: '0.00',
     scan_starts_at: '',
     scan_ends_at: ''
-}
-const money = value => {
-    return Number(value || 0).toLocaleString('en-PH', {
-        style: 'currency',
-        currency: 'PHP'
-    })
 }
 function useNow() {
     const [now, setNow] = useState(Date.now)
@@ -156,7 +134,7 @@ function EventForm({
     saving,
     onCancel
 }) {
-    const [form, setForm] = useState(initial)
+    const [form, setForm] = useState({ ...emptyEvent, ...initial })
     const field = key => {
         return {
             value: form[key],
@@ -196,12 +174,20 @@ function EventForm({
                 >{type.name} — {money(type.fine_amount)}</option>
             })}
         </select></label>}
-        <label>Scanning starts (PHT)<input
+        {form.event_type === 'ATTENDANCE' && <label>Absence fine (PHP)<input
+            type="number"
+            min="0"
+            max="99999999.99"
+            step="0.01"
+            required
+            {...field('absence_fine_amount')}
+        /><small>Charged to rostered students marked absent after the event ends. Enter 0 for no absence fine.</small></label>}
+        <label>Scanning starts<input
             type="datetime-local"
             required
             {...field('scan_starts_at')}
         /></label>
-        <label>Scanning ends (PHT)<input
+        <label>Scanning ends<input
             type="datetime-local"
             required
             min={form.scan_starts_at || undefined}
@@ -302,19 +288,27 @@ function Events({
     now
 }) {
     const [editing, setEditing] = useState(null)
+    const [creating, setCreating] = useState(false)
     return <>
         <h2>Attendance Events</h2>
-        <section className="org-panel">
-            <h3>Create Attendance Event</h3>
-            <p>Scanning opens and closes automatically based on these Philippine time settings.</p>
-            <EventForm
-                types={types}
-                saving={saving}
-                onSave={form => {
-                    return action('events/create', form)
-                }}
-            />
-        </section>
+        <div className="org-actions">
+            <button type="button" onClick={() => setCreating(true)}>Create new</button>
+        </div>
+        {creating && <Modal title="Create Attendance Event" onClose={() => {
+            if (!saving) setCreating(false)
+        }}>
+            <p>Scanning opens and closes automatically at the scheduled times.</p>
+            {error && <p role="alert" className="org-feedback error">{error}</p>}
+            <EventForm types={types} saving={saving}
+                onCancel={() => setCreating(false)}
+                onSave={async form => {
+                    if (await action('events/create', form)) {
+                        setCreating(false)
+                        return true
+                    }
+                    return false
+                }} />
+        </Modal>}
         <section className="org-panel">
             <h3>Manage Events</h3>
             {!events.length ? <p>No events yet.</p> : <div className="org-table">
@@ -323,7 +317,7 @@ function Events({
                         <tr>
                             <th>Event</th>
                             <th>Type</th>
-                            <th>Scan Window (PHT)</th>
+                            <th>Scan Window</th>
                             <th>Scanning</th>
                             <th>Actions</th>
                         </tr>
@@ -334,6 +328,7 @@ function Events({
                             <td>
                                 {event.event_type}
                                 {event.violation_name && <small>{event.violation_name} · {money(event.fine_amount)}</small>}
+                                {event.event_type === 'ATTENDANCE' && <small>Absence fine: {money(event.absence_fine_amount)}</small>}
                             </td>
                             <td>{pht(event.scan_starts_at)}<br />to {pht(event.scan_ends_at)}</td>
                             <td>{windowStatus(event, now)}</td>
@@ -393,9 +388,19 @@ function Events({
         </Modal>}
     </>
 }
+function RecordSorting({ filters, onChange }) {
+    return <label className="org-field">Sort
+        <select value={filters.sort || 'az'} onChange={event => onChange({ sort: event.target.value })}>
+            <option value="az">A–Z</option>
+            <option value="recent">Recent</option>
+            <option value="za">Z–A</option>
+        </select>
+    </label>
+}
 function RecordTable({
     records,
-    includeEvent = false
+    includeEvent = false,
+    showAttendance = true
 }) {
     return !records.length ? <p>No records yet.</p> : <div className="org-table">
         <table>
@@ -407,10 +412,10 @@ function RecordTable({
                     <th>Name</th>
                     <th>Student Number</th>
                     {includeEvent && <th>Event</th>}
-                    <th>Attendance Status</th>
-                    <th>Type / Violations</th>
+                    {showAttendance && <th>Attendance Status</th>}
+                    <th>Recorded Violations</th>
                     <th>Fine (PHP)</th>
-                    <th>Recorded At (PHT)</th>
+                    <th>Recorded At</th>
                 </tr>
             </thead>
             <tbody>{records.map(record => {
@@ -421,11 +426,11 @@ function RecordTable({
                     <td>{record.full_name}</td>
                     <td>{record.student_number}</td>
                     {includeEvent && <td>{record.event_name}</td>}
-                    <td>{record.attendance_status || '—'}</td>
+                    {showAttendance && <td>{record.attendance_status || '—'}</td>}
                     <td>
-                        {record.record_type}
-                        {record.violation_name && <small>{record.violation_name}</small>}
-                        {record.additional_violations && <small>{record.additional_violations}</small>}
+                        {record.record_type === 'ATTENDANCE'
+                            ? record.additional_violations || 'None'
+                            : [record.violation_name, record.additional_violations].filter(Boolean).join(', ') || 'None'}
                     </td>
                     <td>{money(record.total_fine ?? record.fine_amount)}</td>
                     <td>{pht(record.recorded_at)}</td>
@@ -452,20 +457,22 @@ async function releaseCamera(reader, starting) {
 }
 function EventScanner({
     event = null,
+    types = [],
     accessToken,
     now
 }) {
-    const [manual, setManual] = useState('')
     const [feedback, setFeedback] = useState('')
     const [confirmation, setConfirmation] = useState(null)
     const [pending, setPending] = useState(false)
     const [cameraBusy, setCameraBusy] = useState(false)
     const [running, setRunning] = useState(false)
     const [records, setRecords] = useState([])
+    const [recordFilters, setRecordFilters] = useState({ student_number: '', section: '', year_level: '', attendance_status: '' })
     const [loading, setLoading] = useState(true)
     const [page, setPage] = useState(1)
     const [pagination, setPagination] = useState(null)
     const [selectedViolations, setSelectedViolations] = useState([])
+    const [duplicateWarning, setDuplicateWarning] = useState(null)
     const eventId = event?.id
     const accepting = !event || windowStatus(event, now) === 'OPEN'
     const [refreshVersion, setRefreshVersion] = useState(0)
@@ -479,7 +486,10 @@ function EventScanner({
             return clearInterval(timer)
         }
     }, [])
-    const recordQuery = eventId ? `event_id=${eventId}` : 'record_type=VIOLATION'
+    const recordQuery = new URLSearchParams({
+        ...(eventId ? { event_id: eventId } : { record_type: 'VIOLATION' }),
+        ...recordFilters
+    }).toString()
     const reader = useRef(null)
     const starting = useRef(null)
     const mounted = useRef(false)
@@ -526,6 +536,7 @@ function EventScanner({
                 return
             }
             setSelectedViolations(result.data.default_violation_ids.map(Number))
+            setDuplicateWarning(null)
             setConfirmation({
                 ...result.data,
                 token
@@ -548,6 +559,7 @@ function EventScanner({
             return
         }
         setConfirmation(null)
+        setDuplicateWarning(null)
         busy.current = false
         cooldown.current = Date.now() + 1500
         setFeedback('Scan canceled. Nothing was saved.')
@@ -557,17 +569,24 @@ function EventScanner({
             return
         }
         setPending(true)
+        let keepConfirmation = false
         try {
             const result = await api(eventId ? 'scanner/record' : 'violations/record', accessToken, {
                 event_id: eventId,
                 qr_token: confirmation.token,
-                violation_type_ids: selectedViolations
+                violation_type_ids: selectedViolations,
+                duplicate_confirmation: duplicateWarning?.duplicate_confirmation
             })
             if (!mounted.current) {
                 return
             }
+            if (result.requires_confirmation) {
+                keepConfirmation = true
+                setDuplicateWarning(result)
+                setFeedback('Already recorded today. Review the existing violations before recording again.')
+                return
+            }
             setFeedback(result.message)
-            setManual('')
             try {
                 const latest = await api(`records?${recordQuery}&page=${page}`, accessToken)
                 if (mounted.current) {
@@ -586,9 +605,12 @@ function EventScanner({
         } finally {
             if (mounted.current) {
                 setPending(false)
-                setConfirmation(null)
+                if (!keepConfirmation) {
+                    setConfirmation(null)
+                    setDuplicateWarning(null)
+                }
             }
-            busy.current = false
+            busy.current = keepConfirmation
             cooldown.current = Date.now() + 1500
         }
     }
@@ -646,7 +668,7 @@ function EventScanner({
         }
     }
     return <>
-        {event ? <p>Scanning: <strong>{windowStatus(event, now)}</strong> · {pht(event.scan_starts_at)} to {pht(event.scan_ends_at)} (PHT)</p> : <p>Scan a student and choose one or more violations. This scanner is available anytime, with or without an attendance event.</p>}
+        {event ? <p>Scanning: <strong>{windowStatus(event, now)}</strong> · {pht(event.scan_starts_at)} to {pht(event.scan_ends_at)}</p> : <p>Scan a student and choose one or more violations. This scanner is available anytime, with or without an attendance event.</p>}
         <div className="org-actions">
             <button
                 onClick={startCamera}
@@ -662,23 +684,6 @@ function EventScanner({
             id="org-qr-reader"
             className="org-reader"
         />
-        <form
-            className="org-form"
-            onSubmit={e => {
-                e.preventDefault()
-                void preview(manual)
-            }}
-        >
-            <label>Paste QR token (or use a USB scanner)<input
-                autoComplete="off"
-                maxLength={100}
-                value={manual}
-                onChange={e => {
-                    return setManual(e.target.value)
-                }}
-            /></label>
-            <button disabled={pending || Boolean(confirmation) || !manual.trim() || !accepting}>Check Token</button>
-        </form>
         <p
             role="status"
             aria-live="polite"
@@ -692,10 +697,60 @@ function EventScanner({
                 filename={event ? 'attendance-records.xlsx' : 'violation-records.xlsx'}
             />
         </div>
-        <p>Sorted by course, year level, section, then name. Export includes all matching records.</p>
+        <p>Export includes all matching records in the selected order.</p>
+        <RecordSorting filters={recordFilters} onChange={changes => {
+            setRecordFilters(current => ({ ...current, ...changes }))
+            setPage(1)
+            setLoading(true)
+        }} />
+        <div className="org-actions">
+            {['student_number', 'section', 'year_level'].map(field => <label className="org-field" key={field}>
+                {field === 'student_number' ? 'Student ID' : field === 'section' ? 'Section' : 'Year Level'}
+                {field === 'year_level' ? <select value={recordFilters[field]} onChange={e => {
+                    setRecordFilters(current => ({ ...current, [field]: e.target.value }))
+                    setPage(1)
+                    setLoading(true)
+                }}>
+                    <option value="">All year levels</option>
+                    {['1st Year', '2nd Year', '3rd Year', '4th Year'].map(year => <option key={year}>{year}</option>)}
+                </select> : <input value={recordFilters[field]} maxLength={100}
+                    placeholder={field === 'student_number' ? 'Search student number' : 'e.g. F1'}
+                    onChange={e => {
+                        setRecordFilters(current => ({ ...current, [field]: e.target.value }))
+                        setPage(1)
+                        setLoading(true)
+                    }} />}
+            </label>)}
+            {event && <label className="org-field">Attendance Status
+                <select value={recordFilters.attendance_status} onChange={e => {
+                    setRecordFilters(current => ({ ...current, attendance_status: e.target.value }))
+                    setPage(1)
+                    setLoading(true)
+                }}>
+                    <option value="">All statuses</option>
+                    <option value="PRESENT">Present</option>
+                    <option value="ABSENT">Absent</option>
+                </select>
+            </label>}
+            {!event && <label className="org-field">Violation Type
+                <select value={recordFilters.violation_name || ''} onChange={e => {
+                    setRecordFilters(current => ({ ...current, violation_name: e.target.value }))
+                    setPage(1)
+                    setLoading(true)
+                }}>
+                    <option value="">All violation types</option>
+                    {[...new Set(types.map(type => type.name))].map(name => <option key={name}>{name}</option>)}
+                </select>
+            </label>}
+            <button type="button" className="secondary" onClick={() => {
+                setRecordFilters({ student_number: '', section: '', year_level: '', attendance_status: '' })
+                setPage(1)
+            }}>Clear Filters</button>
+        </div>
         {loading ? <p>Loading records…</p> : <><RecordTable
             records={records}
             includeEvent={!event}
+            showAttendance={Boolean(event)}
         /><Pagination
                 pagination={pagination}
                 onPage={value => {
@@ -704,7 +759,7 @@ function EventScanner({
                 }}
             /></>}
         {confirmation && <Modal
-            title="Confirm Scan"
+            title={duplicateWarning ? 'Violation Already Recorded Today' : 'Confirm Scan'}
             onClose={cancel}
         >
             {Object.entries({
@@ -733,6 +788,7 @@ function EventScanner({
                         checked={selectedViolations.includes(Number(type.id))}
                         disabled={confirmation.default_violation_ids.includes(Number(type.id))}
                         onChange={e => {
+                            setDuplicateWarning(null)
                             return setSelectedViolations(current => {
                                 return e.target.checked ? [...current, Number(type.id)] : current.filter(id => {
                                     return id !== Number(type.id)
@@ -750,11 +806,23 @@ function EventScanner({
                     return sum + Number(type.fine_amount)
                 }, 0))}</strong>
             </p>
+            {duplicateWarning && <section role="alert" className="org-duplicate-warning">
+                <h3>Are you sure you want to record this student again?</h3>
+                <p>These selected violations were already recorded today. Continuing adds another fine for each selected violation.</p>
+                <ul>
+                    {duplicateWarning.existing_violations.map(item => <li key={item.record_key}>
+                        <strong>{item.violation_name}</strong> — {money(item.fine_amount)}
+                        <br />
+                        {pht(item.recorded_at)} · {item.event_name || 'Standalone violation'}
+                    </li>)}
+                </ul>
+                <p>Cancel saves nothing. You can also change the selected violations above.</p>
+            </section>}
             <div className="org-actions">
                 <button
                     disabled={pending || !accepting || !eventId && !selectedViolations.length}
                     onClick={record}
-                >{pending ? 'Recording…' : eventId ? 'Record Attendance' : 'Record Violations'}</button>
+                >{pending ? 'Recording…' : duplicateWarning ? 'Yes, Record Again' : eventId ? 'Record Attendance' : 'Record Violations'}</button>
                 <button
                     className="secondary"
                     disabled={pending}
@@ -806,6 +874,8 @@ function Records({
     events
 }) {
     const [eventId, setEventId] = useState('')
+    const [filters, setFilters] = useState({ search: '', section: '', year_level: '', attendance_status: '' })
+    const query = new URLSearchParams({ record_type: kind, event_id: eventId, ...filters }).toString()
     const [records, setRecords] = useState([])
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(true)
@@ -813,7 +883,7 @@ function Records({
     const [pagination, setPagination] = useState(null)
     useEffect(() => {
         const controller = new AbortController()
-        api(`records?record_type=${kind}&event_id=${encodeURIComponent(eventId)}&page=${page}`, accessToken, undefined, controller.signal).then(result => {
+        api(`records?${query}&page=${page}`, accessToken, undefined, controller.signal).then(result => {
             setRecords(result.data)
             setPagination(result.pagination)
         }).catch(err => {
@@ -828,9 +898,37 @@ function Records({
         return () => {
             return controller.abort()
         }
-    }, [kind, eventId, page, accessToken])
+    }, [query, page, accessToken])
     return <section className="org-panel">
         <h2>{kind === 'ATTENDANCE' ? 'Attendance' : 'Violations'}</h2>
+        <div className="org-actions">
+            {['search', 'section', 'year_level', 'attendance_status'].map(field => <label className="org-field" key={field}>
+                {{ search: 'Search student', section: 'Section', year_level: 'Year Level', attendance_status: 'Attendance Status' }[field]}
+                {['search', 'section'].includes(field) ? <input value={filters[field]}
+                    placeholder={field === 'search' ? 'Student number or name' : 'e.g. F1'} maxLength={100}
+                    onChange={e => {
+                        setFilters(current => ({ ...current, [field]: e.target.value }))
+                        setPage(1)
+                        setLoading(true)
+                    }} /> : <select value={filters[field]} onChange={e => {
+                    setFilters(current => ({ ...current, [field]: e.target.value }))
+                    setPage(1)
+                    setLoading(true)
+                }}>
+                    <option value="">All</option>
+                    {(field === 'year_level' ? ['1st Year', '2nd Year', '3rd Year', '4th Year'] : ['PRESENT', 'ABSENT']).map(value => <option key={value}>{value}</option>)}
+                </select>}
+            </label>)}
+            <button type="button" className="secondary" onClick={() => {
+                setFilters({ search: '', section: '', year_level: '', attendance_status: '' })
+                setPage(1)
+            }}>Clear Filters</button>
+        </div>
+        <RecordSorting filters={filters} onChange={changes => {
+            setFilters(current => ({ ...current, ...changes }))
+            setPage(1)
+            setLoading(true)
+        }} />
         <label className="org-field">Event<select
             value={eventId}
             onChange={e => {
@@ -856,11 +954,11 @@ function Records({
             className="org-feedback error"
         >{error}</p>}
         <DownloadExcel
-            path={`records/export?record_type=${kind}&event_id=${encodeURIComponent(eventId)}`}
+            path={`records/export?${query}`}
             accessToken={accessToken}
             filename="attendance-records.xlsx"
         />
-        {loading ? <p>Loading records…</p> : <><p>Sorted by course, year level, section, then name.</p><RecordTable
+        {loading ? <p>Loading records…</p> : <><RecordTable
             records={records}
             includeEvent
         /><Pagination
@@ -878,15 +976,24 @@ function StudentRecords({
 }) {
     const [filters, setFilters] = useState({
         search: '',
+        course: '',
+        year_level: '',
+        section: '',
         page: 1
     })
+    const [selectedStudent, setSelectedStudent] = useState(null)
+    const [options, setOptions] = useState({ course: [], year_level: [] })
     const [result, setResult] = useState(null)
     const [error, setError] = useState('')
     const query = new URLSearchParams(filters).toString()
     useEffect(() => {
         const controller = new AbortController()
         const timer = setTimeout(() => {
-            api(`students?${query}`, accessToken, undefined, controller.signal).then(setResult).catch(err => {
+            api(`students?${query}`, accessToken, undefined, controller.signal).then(response => {
+                setResult(response)
+                setOptions(response.filter_options)
+                setError('')
+            }).catch(err => {
                 if (err.name !== 'AbortError') {
                     setError(err.message)
                 }
@@ -912,6 +1019,7 @@ function StudentRecords({
             placeholder="Student number, name, or section"
             onChange={e => {
                 setFilters({
+                    ...filters,
                     search: e.target.value,
                     page: 1
                 })
@@ -919,7 +1027,31 @@ function StudentRecords({
                 setError('')
             }}
         /></label>
-        <p>Sorted by course, year level, section, then name.</p>
+        <div className="org-actions">
+            {['course', 'year_level'].map(field => <label className="org-field" key={field}>
+                {field === 'course' ? 'Course' : 'Year Level'}
+                <select value={filters[field]} onChange={event => {
+                    setFilters({ ...filters, [field]: event.target.value, page: 1 })
+                    setResult(null)
+                }}>
+                    <option value="">All</option>
+                    {(field === 'year_level' ? ['1st Year', '2nd Year', '3rd Year', '4th Year']
+                        : scope?.all_courses ? options.course || [] : scope?.courses || []).filter(Boolean).map(value => <option key={value} value={value}>{value}</option>)}
+                </select>
+            </label>)}
+            <label className="org-field">Section<input placeholder="e.g. F1" value={filters.section} maxLength={100}
+                onChange={event => {
+                    setFilters({ ...filters, section: event.target.value, page: 1 })
+                    setResult(null)
+                }} /></label>
+            <button className="secondary" onClick={() => {
+                setFilters({ search: '', course: '', year_level: '', section: '', page: 1 })
+            }}>Clear Filters</button>
+        </div>
+        <RecordSorting filters={filters} onChange={changes => {
+            setFilters(current => ({ ...current, ...changes, page: 1 }))
+            setResult(null)
+        }} />
         {error ? <p role="alert">{error}</p> : !result ? <p>Loading students…</p> : <>
             {!result.data.length ? <p>No students found.</p> : <div className="org-table">
                 <table>
@@ -932,6 +1064,7 @@ function StudentRecords({
                             <th>Student Number</th>
                             <th>Account</th>
                             <th>Activation</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>{result.data.map(student => {
@@ -943,6 +1076,7 @@ function StudentRecords({
                             <td>{student.student_number}</td>
                             <td>{student.account_status}</td>
                             <td>{student.activation_status}</td>
+                            <td><button onClick={() => setSelectedStudent(student.id)}>View Record</button></td>
                         </tr>
                     })}</tbody>
                 </table>
@@ -960,6 +1094,7 @@ function StudentRecords({
                 }}
             />
         </>}
+        {selectedStudent && <StudentRecord studentId={selectedStudent} accessToken={accessToken} onClose={() => setSelectedStudent(null)} />}
     </section>
 }
 export default function OrganizationDashboard({
@@ -1026,7 +1161,7 @@ export default function OrganizationDashboard({
             setSaving(false)
         }
     }
-    const nav = [['dashboard', 'Dashboard'], ['students', 'Student Records'], ['events', 'Events'], ['attendance', 'Attendance'], ['violations', 'Violations'], ['fines', 'Fines'], ['payments', 'Payments'], ['profile', 'Account Settings']]
+    const nav = [['dashboard', 'Dashboard'], ['students', 'Student Records'], ['events', 'Events'], ['attendance', 'Attendance'], ['violations', 'Violations'], ['payments', 'Payments'], ['profile', 'Account Settings']]
     return <PortalLayout
         className="org-shell"
         role="Organization"
@@ -1064,7 +1199,6 @@ export default function OrganizationDashboard({
                     accessToken={accessToken}
                     organization
                 />}
-                {page === 'fines' && <OrganizationFines accessToken={accessToken} />}
                 {page === 'students' && <StudentRecords
                     accessToken={accessToken}
                     scope={data.scope}
@@ -1108,6 +1242,7 @@ export default function OrganizationDashboard({
                     <section className="org-panel">
                         <h2>Violation Scanner</h2>
                         <EventScanner
+                            types={data.types}
                             accessToken={accessToken}
                             now={now}
                         />

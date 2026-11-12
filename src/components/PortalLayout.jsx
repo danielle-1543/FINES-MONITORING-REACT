@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { trackEvent } from '../config/posthog'
 import './PortalLayout.css'
 
 // Outline SVG paths adapted from Heroicons (Tailwind Labs), MIT licensed.
 // https://github.com/tailwindlabs/heroicons
 const paths = {
+    notifications: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',
     dashboard: 'M3.75 3.75h6v6h-6z M14.25 3.75h6v6h-6z M3.75 14.25h6v6h-6z M14.25 14.25h6v6h-6z',
     students: 'M18 18.72a9.1 9.1 0 0 0 3.74-.48 3 3 0 0 0-4.68-2.5 M6 18.72a9.1 9.1 0 0 1-3.74-.48 3 3 0 0 1 4.68-2.5 M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM20.25 9a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM8.25 9a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM12 14.25a6 6 0 0 0-6 6v.75a17.9 17.9 0 0 0 12 0v-.75a6 6 0 0 0-6-6Z',
     organizations: 'M3 21h18M3 10.5h18M4.5 21V10.5m5 10.5V10.5m5 10.5V10.5m5 10.5V10.5M3 7.5l9-5.25 9 5.25v3H3v-3Z',
@@ -38,6 +40,7 @@ export default function PortalLayout({
     role,
     account,
     items,
+    badges = {},
     page,
     onNavigate,
     onLogout,
@@ -115,6 +118,10 @@ export default function PortalLayout({
                 />
                 <strong>MINSU-MCCS</strong>
             </div>
+            {role.toUpperCase() === 'ADMIN' && <section className="portal-profile" aria-label="Administrator account">
+                <span className="portal-avatar">{account?.slice(0, 2).toUpperCase()}</span>
+                <div><strong>{account}</strong><small>Administrator</small></div>
+            </section>}
             <nav aria-label={`${role} navigation`}>
                 <ul>{items.map(([key, label]) => {
                     return <li key={key}>
@@ -122,7 +129,16 @@ export default function PortalLayout({
                             type="button"
                             aria-current={page === key ? 'page' : undefined}
                             onClick={() => {
+                                if (key !== page) {
+                                    trackEvent('feature_used', {
+                                        role,
+                                        feature: key,
+                                        source: 'sidebar'
+                                    })
+                                }
+
                                 onNavigate(key)
+
                                 if (mobile) {
                                     closeMenu()
                                 }
@@ -130,6 +146,7 @@ export default function PortalLayout({
                         >
                             <Icon name={key} />
                             <span>{label}</span>
+                            {badges[key] > 0 && <span className="portal-nav-badge">{badges[key] > 99 ? '99+' : badges[key]}</span>}
                         </button>
                     </li>
                 })}</ul>

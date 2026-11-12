@@ -266,3 +266,87 @@
         padding: 15px;
     }
 }
+.org-duplicate-warning {
+    margin: 16px 0;
+    padding: 16px;
+    border: 1px solid #143c1e;
+    border-left: 4px solid #143c1e;
+    border-radius: 10px;
+    background: #f1f6f2;
+}
+
+.org-duplicate-warning h3 {
+    margin-top: 0;
+}
+
+.org-duplicate-warning li + li {
+    margin-top: 12px;
+}
+
+.org-dialog.org-student-record {
+    width: min(1100px, 94vw);
+    max-width: 94vw;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.org-student-record .student-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 18px 0;
+}
+
+.org-student-record .student-summary > div {
+    padding: 14px;
+    border: 1px solid #dce6dd;
+    border-radius: 10px;
+    background: #f4f8f4;
+}
+
+.org-student-record .student-summary span,
+.org-student-record .student-summary strong {
+    display: block;
+}
+
+.org-voucher-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    border: 1px solid #b8c8bb;
+    border-radius: 8px;
+    font: inherit;
+    resize: vertical;
+}
+
+.org-student-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+}
+
+.org-student-details dt {
+    font-size: 0.85rem;
+    color: #526355;
+}
+
+.org-student-details dd {
+    margin: 4px 0 0;
+    font-weight: 600;
+}
+
+.org-voucher-form {
+    margin: 18px 0;
+    padding: 20px;
+    border: 1px solid #c5d6c8;
+    border-radius: 12px;
+    background: #f4f8f4;
+}
+
+.org-voucher-form fieldset {
+    border: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+

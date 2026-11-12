@@ -146,7 +146,11 @@ export default function StudentProfile({
         >{notice}</p>}
         {!data ? <p>Loading your profile…</p> : <>
             <section className="account-card student-profile-card">
-                <h2>Student Details</h2>
+                <header className="student-profile-intro">
+                    <span className="profile-initials">{data.profile.full_name.split(' ').filter(Boolean).map(name => name[0]).slice(0, 2).join('')}</span>
+                    <div><h2>{data.profile.full_name}</h2><p>{data.profile.student_number}</p></div>
+                </header>
+                <h3>Personal & Academic Information</h3>
                 <dl>{Object.entries({
                     'Student Number': data.profile.student_number,
                     Name: data.profile.full_name,

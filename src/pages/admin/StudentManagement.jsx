@@ -1,11 +1,37 @@
+import { confirmSensitive } from '../../utils/confirmation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import QRCode from 'qrcode'
 import { jsPDF } from 'jspdf'
 import '../../css/admin/StudentManagement.css'
 const API = '/api/admin/students'
-const courses = ['AB ENGLISH', 'ABPSYCH', 'BSHM', 'BSTM', 'BSIT', 'BSCRIM', 'BSED', 'BTVTED', 'BTLED']
 const years = ['1st Year', '2nd Year', '3rd Year', '4th Year']
+const updateReasons = {
+    PROMOTION: 'Year-level update / Promotion',
+    RETAINED: 'Retained year level',
+    SECTION_CHANGE: 'Change section',
+    SHIFT_COURSE: 'Shift course',
+    TRANSFERRED_OUT: 'Transferred out',
+    DROPPED_OUT: 'Dropped out',
+    OTHER_CORRECTION: 'Other correction',
+    DEACTIVATE: 'Deactivate account',
+    REACTIVATE: 'Reactivate account'
+}
+const updateFields = {
+    PROMOTION: ['year_level', 'section'], RETAINED: ['year_level', 'section'],
+    SECTION_CHANGE: ['section'], SHIFT_COURSE: ['course', 'year_level', 'section'],
+    OTHER_CORRECTION: ['student_number', 'full_name', 'year_level', 'section']
+}
+const fieldLabels = {
+    student_number: 'Student number', full_name: 'Full name', course: 'Course',
+    year_level: 'Year level', section: 'Section', account_status: 'Account access',
+}
+function changesLabel(before, after) {
+    return Object.keys(fieldLabels).filter(key => before[key] !== after[key]).map(key => {
+        const display = value => value || '—'
+        return `${fieldLabels[key]}: ${display(before[key])} → ${display(after[key])}`
+    }).join('; ') || 'Academic details unchanged; reason recorded.'
+}
 const blank = {
     student_number: '',
     full_name: '',
@@ -16,7 +42,8 @@ const blank = {
 function Modal({
     title,
     onClose,
-    children
+    children,
+    className = ''
 }) {
     const dialog = useRef(null)
     useEffect(() => {
@@ -28,9 +55,12 @@ function Modal({
     }, [])
     return <dialog
         ref={dialog}
-        className="sm-modal"
+        className={`sm-modal ${className}`}
         aria-label={title}
-        onCancel={onClose}
+        onCancel={event => {
+            event.preventDefault()
+            onClose()
+        }}
         onClick={event => {
             if (event.target === event.currentTarget) {
                 onClose()
@@ -47,16 +77,24 @@ function Modal({
         {children}
     </dialog>
 }
-function datePHT(value) {
+function datePHT(value, detailed = false) {
     if (!value) {
         return '—'
     }
     const date = new Date(String(value).replace(' ', 'T') + (/[Z+]|-\d\d:\d\d$/.test(String(value)) ? '' : '+08:00'))
     return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('en-PH', {
-        timeZone: 'Asia/Manila'
+        timeZone: 'Asia/Manila',
+        ...(detailed ? {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+        } : {})
     })
 }
 async function req(url, token, method = 'GET', body = null) {
+    await confirmSensitive(url, body)
     const response = await fetch(url, {
         method,
         headers: {
@@ -112,6 +150,7 @@ export default function StudentManagement({
         page: 1,
         per_page: 10
     })
+    const courses = opts.courses
     const [pagination, setPagination] = useState({
         current_page: 1,
         total_pages: 1,
@@ -119,16 +158,30 @@ export default function StudentManagement({
         per_page: 10
     })
     const [form, setForm] = useState(blank)
-    const [editId, setEditId] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [notice, setNotice] = useState('')
     const [secret, setSecret] = useState(null)
-    const [qr, setQr] = useState(null)
+    const [profile, setProfile] = useState(null)
+    const [multipleEdits, setMultipleEdits] = useState(false)
+    const profileVersion = useRef(0)
     const [formOpen, setFormOpen] = useState(false)
     const [importOpen, setImportOpen] = useState(false)
     const [deleteStudent, setDeleteStudent] = useState(null)
     const [exporting, setExporting] = useState(false)
+    const [selectedIds, setSelectedIds] = useState([])
+    const [allMatching, setAllMatching] = useState(false)
+    const [selectingMatching, setSelectingMatching] = useState(false)
+    const selectionVersion = useRef(0)
+    const hasMatchingFilter = ['search', 'section', 'year_level', 'course', 'activation_status', 'account_status'].some(key => String(filters[key] || '').trim() !== '')
+    const [updateTarget, setUpdateTarget] = useState(null)
+    const [updateReason, setUpdateReason] = useState('')
+    const [updateChanges, setUpdateChanges] = useState({})
+    const [updateNote, setUpdateNote] = useState('')
+    const [updateReview, setUpdateReview] = useState(null)
+    const [updateBusy, setUpdateBusy] = useState(false)
+    const [updateError, setUpdateError] = useState('')
+    const [history, setHistory] = useState(null)
     const requestVersion = useRef(0)
     const load = useCallback(async () => {
         const version = ++requestVersion.current
@@ -220,7 +273,35 @@ export default function StudentManagement({
             active = false
         }
     }, [accessToken])
+    function clearStudentSelection() {
+        ++selectionVersion.current
+        setSelectingMatching(false)
+        setSelectedIds([])
+        setAllMatching(false)
+    }
+    async function selectMatchingStudents() {
+        if (!hasMatchingFilter) return
+        const version = ++selectionVersion.current
+        setSelectingMatching(true)
+        setError('')
+        try {
+            const query = new URLSearchParams(filters)
+            const result = await req(`${API}/matching?${query}`, accessToken)
+            if (version !== selectionVersion.current) return
+            setSelectedIds(result.data.student_ids)
+            setAllMatching(true)
+        } catch (err) {
+            if (version === selectionVersion.current) {
+                setSelectedIds([])
+                setAllMatching(false)
+                setError(err.message)
+            }
+        } finally {
+            if (version === selectionVersion.current) setSelectingMatching(false)
+        }
+    }
     function filter(key, value) {
+        clearStudentSelection()
         setLoading(true)
         setFilters(current => {
             return {
@@ -229,6 +310,62 @@ export default function StudentManagement({
                 page: 1
             }
         })
+    }
+    function openUpdate(student = null, reason = '') {
+        const ids = student ? [Number(student.id)] : selectedIds
+        setUpdateTarget(student ? { student_ids: ids, count: 1, label: student.full_name, existing: student, departure: student.departure_reason, account: student.account_status } : {
+            student_ids: ids, all_matching: false, filters: { ...filters },
+            count: ids.length,
+            label: allMatching ? 'All students matching the current filters' : 'Selected students'
+        })
+        setUpdateReason(reason)
+        setUpdateChanges({})
+        setUpdateNote('')
+        setUpdateReview(null)
+        setUpdateError('')
+    }
+    async function reviewUpdate() {
+        setUpdateBusy(true)
+        setUpdateError('')
+        try {
+            const payload = { ...updateTarget, reason: updateReason, changes: updateChanges, note: updateNote, preview: true }
+            const result = await req(`${API}/update`, accessToken, 'POST', payload)
+            setUpdateReview({ ...result.data, payload })
+        } catch (err) {
+            setUpdateError(err.message)
+        } finally {
+            setUpdateBusy(false)
+        }
+    }
+    async function confirmUpdate() {
+        setUpdateBusy(true)
+        setUpdateError('')
+        try {
+            const result = await req(`${API}/update`, accessToken, 'POST', {
+                ...updateReview.payload, all_matching: false, preview: false,
+                student_ids: updateReview.students.map(student => student.id), fingerprint: updateReview.fingerprint
+            })
+            setUpdateTarget(null)
+            setSelectedIds([])
+            setAllMatching(false)
+            setNotice(result.message)
+            await Promise.all([load(), meta()])
+            if (profile) await openProfile(profile.student)
+        } catch (err) {
+            setUpdateError(err.message)
+            setUpdateReview(null)
+        } finally {
+            setUpdateBusy(false)
+        }
+    }
+    async function showHistory(student) {
+        setHistory({ id: student.id, name: student.full_name, rows: [], loading: true, error: '' })
+        try {
+            const result = await req(`${API}/change-history?id=${student.id}`, accessToken)
+            setHistory(current => current?.id === student.id ? { ...current, rows: result.data, loading: false } : current)
+        } catch (err) {
+            setHistory(current => current?.id === student.id ? { ...current, loading: false, error: err.message } : current)
+        }
     }
     async function action(path, body) {
         setError('')
@@ -248,16 +385,9 @@ export default function StudentManagement({
     }
     async function save(event) {
         event.preventDefault()
-        const data = await action(editId ? 'update' : 'create', editId ? {
-            id: editId,
-            ...form
-        } : form)
+        const data = await action('create', form)
         if (data) {
-            if (!editId && data.data?.activation_code) {
-                setSecret(data.data)
-            }
             setForm(blank)
-            setEditId(null)
             setFormOpen(false)
         }
     }
@@ -331,21 +461,51 @@ export default function StudentManagement({
             setError(err.message)
         }
     }
-    async function showQR(student) {
+    async function openProfile(student) {
+        const version = ++profileVersion.current
+        setProfile({ student, loading: true, image: '', code: null, error: '', qrError: '', codeError: '', copyMessage: '' })
         try {
-            const result = await req(`${API}/qr-details`, accessToken, 'POST', {
-                id: student.id
-            })
-            const image = await QRCode.toDataURL(result.data.qr_token, {
-                width: 300,
-                margin: 2
-            })
-            setQr({
-                ...result.data,
-                image
-            })
+            const details = await req(`${API}/profile?id=${student.id}`, accessToken)
+            const current = details.data
+            const [qrResult, codeResult] = await Promise.allSettled([
+                current.qr_token_status === 'ACTIVE' ? req(`${API}/qr-details`, accessToken, 'POST', { id: student.id })
+                    .then(result => QRCode.toDataURL(result.data.qr_token, { width: 300, margin: 2 })) : Promise.resolve(''),
+                current.activation_status === 'PENDING' ? req(`${API}/reveal-code`, accessToken, 'POST', { id: student.id }).then(result => result.data) : Promise.resolve(null)
+            ])
+            if (version !== profileVersion.current) return
+            setProfile({ student: current, loading: false, error: '', copyMessage: '',
+                image: qrResult.status === 'fulfilled' ? qrResult.value : '',
+                qrError: qrResult.status === 'rejected' ? qrResult.reason.message : '',
+                code: codeResult.status === 'fulfilled' ? codeResult.value : null,
+                codeError: codeResult.status === 'rejected' ? codeResult.reason.message : '' })
         } catch (err) {
-            setError(err.message)
+            if (version === profileVersion.current) setProfile(current => current && { ...current, loading: false, error: err.message })
+        }
+    }
+    function closeProfile() {
+        ++profileVersion.current
+        setProfile(null)
+    }
+    async function copyProfileCode() {
+        try {
+            if (!navigator.clipboard?.writeText) throw new Error('Copy is unavailable. Select the displayed code and copy it manually.')
+            await navigator.clipboard.writeText(profile.code.activation_code)
+            setProfile(current => current && { ...current, copyMessage: 'Activation code copied.' })
+        } catch (err) {
+            setProfile(current => current && { ...current, copyMessage: err.message || 'Unable to copy the activation code.' })
+        }
+    }
+    async function resetProfileCode() {
+        const student = profile.student
+        const version = profileVersion.current
+        setProfile(current => ({ ...current, loading: true, error: '' }))
+        try {
+            await req(`${API}/reset-code`, accessToken, 'POST', { id: student.id })
+            if (version !== profileVersion.current) return
+            await openProfile(student)
+            await load()
+        } catch (err) {
+            setProfile(current => current && { ...current, loading: false, error: err.message })
         }
     }
     async function exportPDF() {
@@ -427,7 +587,6 @@ export default function StudentManagement({
                 <button
                     className="sm-btn dark"
                     onClick={() => {
-                        setEditId(null)
                         setForm(blank)
                         setFormOpen(true)
                     }}
@@ -460,8 +619,179 @@ export default function StudentManagement({
             })}
         </section>
 
+        {profile && !updateTarget && !history && !deleteStudent && <Modal title="Student Profile" className="sm-profile-modal" onClose={closeProfile}>
+            <p className="sm-profile-subtitle">Student account information and management</p>
+            <div className="sm-profile-heading">
+                <div className="sm-profile-avatar" aria-hidden="true">
+                    {profile.student.full_name?.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('') || 'S'}
+                </div>
+                <div className="sm-profile-identity">
+                    <h3>{profile.student.full_name}</h3>
+                    <p>{[profile.student.student_number, profile.student.course, profile.student.year_level, profile.student.section].filter(Boolean).join(' · ')}</p>
+                    <p>Username: <strong>{profile.student.username || 'Not set up yet'}</strong></p>
+                    <div className="sm-profile-badges">
+                        <span className={`sm-profile-badge ${profile.student.account_status === 'ACTIVE' ? 'positive' : 'negative'}`}>
+                            {profile.student.account_status === 'ACTIVE' ? 'Active account' : 'Inactive account'}
+                        </span>
+                        <span className={`sm-profile-badge ${profile.student.activation_status === 'ACTIVATED' ? 'positive' : 'pending'}`}>
+                            {profile.student.activation_status === 'ACTIVATED' ? 'Activated' : 'Pending activation'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {profile.error && <p role="alert" className="sm-alert error">{profile.error}</p>}
+            {profile.loading && <p role="status">Loading student details, QR, and activation information…</p>}
+            <div className="sm-profile-layout">
+                <section className="sm-profile-credentials" aria-label="Student QR and activation">
+                    <h3>QR Code Management</h3>
+                    <span className={`sm-profile-badge ${profile.student.qr_token_status === 'ACTIVE' ? 'positive' : 'negative'}`}>
+                        QR {profile.student.qr_token_status || 'unavailable'}
+                    </span>
+                    <figure className="sm-profile-qr-preview">
+                        {profile.image ? <>
+                            <img src={profile.image} width="240" height="240" alt={`QR for ${profile.student.full_name}`} />
+                            <figcaption>Current QR Code</figcaption>
+                        </> : <p>{profile.loading ? 'Loading QR code…' : profile.qrError || 'No active QR is available.'}</p>}
+                    </figure>
+                    {profile.image && <a className="sm-btn" href={profile.image} download={`QR-${profile.student.student_number}.png`}>Download QR</a>}
+                    <div className="sm-actions">
+                        {['REVOKE', 'REGENERATE'].map(action => <button type="button" className="sm-btn" key={action}
+                            disabled={profile.loading || (action === 'REVOKE' && profile.student.qr_token_status !== 'ACTIVE')}
+                            onClick={async () => {
+                                setProfile(current => ({ ...current, loading: true }))
+                                try {
+                                    await req(`${API}/qr-status`, accessToken, 'POST', { id: profile.student.id, full_name: profile.student.full_name, action })
+                                    await openProfile(profile.student)
+                                    await load()
+                                } catch (error) {
+                                    setNotice(error.message)
+                                    setProfile(current => ({ ...current, loading: false }))
+                                }
+                            }}>{action === 'REVOKE' ? 'Revoke QR Code' : 'Generate New QR Code'}</button>)}
+                    </div>
+                    <dl className="sm-profile-qr-dates">
+                        <div><dt>First generated</dt><dd>{datePHT(profile.student.qr_first_generated_at || profile.student.qr_token_generated_at, true)}</dd></div>
+                        <div><dt>Last regenerated</dt><dd>{datePHT(profile.student.qr_last_regenerated_at, true)}</dd></div>
+                        <div><dt>Current QR generated</dt><dd>{datePHT(profile.student.qr_token_generated_at, true)}</dd></div>
+                    </dl>
+                    {profile.student.activation_status === 'PENDING' ? <>
+                        <h3>Activation code</h3>
+                        {profile.code ? <>
+                            <div className="sm-profile-code"><code>{profile.code.activation_code}</code>
+                                <button type="button" className="sm-btn" onClick={copyProfileCode}>Copy code</button></div>
+                            <p>Expires: {datePHT(profile.code.activation_code_expires_at, true)}</p>
+                        </> : !profile.loading && <p>{profile.codeError || 'No readable activation code is available.'}</p>}
+                        <button type="button" className="sm-btn" disabled={profile.loading || Boolean(profile.student.user_id)} onClick={resetProfileCode}>Generate replacement code</button>
+                    </> : <p>This account is already activated. No activation code is displayed.</p>}
+                    {profile.copyMessage && <p role="status">{profile.copyMessage}</p>}
+                </section>
+                <div className="sm-profile-information">
+                    {[
+                        ['Student Information', [
+                            ['Full name', profile.student.full_name], ['Student number', profile.student.student_number],
+                            ['Course', profile.student.course], ['Year level', profile.student.year_level], ['Section', profile.student.section]
+                        ]],
+                        ['Account Information', [
+                            ['Activation status', profile.student.activation_status === 'ACTIVATED' ? 'Activated' : 'Pending activation'],
+                            ['Account access', profile.student.account_status === 'ACTIVE' ? 'Active' : 'Deactivated'],
+                            ['Username', profile.student.username || (profile.student.user_id ? 'Not provided' : 'Not set up yet')],
+                            ['Email', profile.student.email || (profile.student.user_id ? 'Not provided' : 'Not set up yet')]
+                        ]],
+                        ['Important dates', [
+                            ['Registered', datePHT(profile.student.registered_at, true)],
+                            ['Activated', profile.student.activated_at ? datePHT(profile.student.activated_at, true) : 'Not activated yet'],
+                            ['Last updated', datePHT(profile.student.updated_at, true)]
+                        ]]
+                    ].map(([heading, fields]) => <section className="sm-profile-section" key={heading}>
+                        <h3>{heading}</h3>
+                        <dl className="sm-profile-details">
+                            {fields.map(([label, value]) => <div key={label}>
+                                <dt>{label}</dt>
+                                <dd>{['Activation status', 'Account access'].includes(label)
+                                    ? <span className={`sm-profile-badge ${['Activated', 'Active'].includes(value) ? 'positive' : value === 'Pending activation' ? 'pending' : 'negative'}`}>{value}</span>
+                                    : value || 'Not provided'}</dd>
+                            </div>)}
+                        </dl>
+                    </section>)}
+                </div>
+            </div>
+            <div className="sm-actions sm-profile-footer">
+                <button type="button" className="sm-btn" disabled={profile.loading} onClick={() => showHistory(profile.student)}>Edit history</button>
+                {profile.student.account_status === 'ACTIVE' ? <button type="button" className="sm-btn"
+                    disabled={profile.loading || !['TRANSFERRED_OUT', 'DROPPED_OUT'].includes(profile.student.departure_reason)}
+                    onClick={() => openUpdate(profile.student, 'DEACTIVATE')}>Deactivate account</button>
+                    : <button type="button" className="sm-btn" disabled={profile.loading} onClick={() => openUpdate(profile.student, 'REACTIVATE')}>Reactivate account</button>}
+                {profile.student.activation_status === 'PENDING' && !profile.student.user_id && <button type="button" className="sm-btn" disabled={profile.loading}
+                    onClick={() => setDeleteStudent(profile.student)}>Delete unused registration</button>}
+                <button type="button" className="sm-btn" onClick={closeProfile}>Close</button>
+                <button type="button" className="sm-btn dark" disabled={profile.loading || Boolean(profile.error)} onClick={() => openUpdate(profile.student)}>Edit Profile</button>
+            </div>
+        </Modal>}
+        {updateTarget && <Modal title={updateReview ? 'Review student updates' : 'Update students'} onClose={() => {
+            if (!updateBusy) setUpdateTarget(null)
+        }}>
+            <p><strong>{updateReview?.count ?? updateTarget.count} student(s)</strong> · {updateTarget.label}</p>
+            <p>Updates apply when confirmed. Existing accounts, QR tokens, activation, fines, and payments are preserved.</p>
+            {updateError && <p className="sm-alert error" role="alert">{updateError}</p>}
+            {!updateReview ? <form className="sm-update-form" onSubmit={event => {
+                event.preventDefault()
+                void reviewUpdate()
+            }}>
+                <label>Reason for update<select required value={updateReason} disabled={updateBusy} onChange={event => {
+                    setUpdateReason(event.target.value)
+                    setUpdateChanges({})
+                }}>
+                    <option value="">Choose a reason</option>
+                    {Object.entries(updateReasons).map(([key, label]) => <option key={key} value={key}
+                        disabled={key === 'DEACTIVATE' && updateTarget.count === 1 && updateTarget.departure !== undefined
+                            && !['TRANSFERRED_OUT', 'DROPPED_OUT'].includes(updateTarget.departure)}>{label}</option>)}
+                </select></label>
+                {(updateFields[updateReason] || []).filter(field => updateTarget.count === 1 || !['student_number', 'full_name'].includes(field)).map(field => <label key={field}>
+                    {fieldLabels[field]}
+                    {field === 'course' || field === 'year_level' ? <select
+                        value={updateChanges[field] ?? updateTarget.existing?.[field] ?? ''} required={field === 'course'} disabled={updateBusy}
+                        onChange={event => setUpdateChanges(current => ({ ...current, [field]: event.target.value }))}>
+                        <option value="">{field === 'course' ? 'Choose destination course' : 'Choose year level'}</option>
+                        {(field === 'course' ? Array.from(new Set([...courses, ...opts.courses])) : years).map(value => <option key={value}>{value}</option>)}
+                    </select> : <input value={updateChanges[field] ?? updateTarget.existing?.[field] ?? ''} placeholder={updateTarget.count > 1 ? "Leave blank to preserve each student’s value" : field === "section" ? "F1" : "Enter value"}
+                        maxLength={field === 'section' ? 50 : field === 'full_name' ? 150 : 30} disabled={updateBusy}
+                        onChange={event => setUpdateChanges(current => ({ ...current, [field]: event.target.value }))} />}
+                </label>)}
+                {['TRANSFERRED_OUT', 'DROPPED_OUT'].includes(updateReason) && <p className="sm-alert">Records this departure reason and enables the separate Deactivate account action. It does not deactivate the account automatically.</p>}
+                {updateReason === 'DEACTIVATE' && <p className="sm-alert error">Students will lose login access and existing sessions will be revoked. Records and QR identities are kept. Every selected student must already have a recorded transfer-out or dropout reason.</p>}
+                {updateReason === 'REACTIVATE' && <p className="sm-alert">Restores account access, clears the departure reason, and requires a fresh login.</p>}
+                <label>Additional note (optional)
+                    <textarea rows="3" maxLength="1000" value={updateNote} disabled={updateBusy}
+                        onChange={event => setUpdateNote(event.target.value)} />
+                </label>
+                <div className="sm-actions"><button className="sm-btn" type="button" disabled={updateBusy} onClick={() => setUpdateTarget(null)}>Cancel</button>
+                    <button className="sm-btn dark" disabled={updateBusy || !updateReason}>{updateBusy ? 'Preparing preview…' : 'Review changes'}</button></div>
+            </form> : <>
+                <p><strong>{updateReasons[updateReason]}</strong></p>
+                {updateNote && <p className="sm-update-note">Note: {updateNote}</p>}
+                {updateReason === 'DEACTIVATE' && <p role="alert" className="sm-alert error">Confirming revokes login access and current sessions for all students below. Their records remain saved.</p>}
+                <div className="sm-table-wrap sm-update-preview"><table><thead><tr><th>Student</th><th>Proposed change</th></tr></thead><tbody>
+                    {updateReview.students.map(student => <tr key={student.id}><td>{student.before.full_name}<br />{student.before.student_number}</td>
+                        <td>{changesLabel(student.before, student.after)}</td></tr>)}
+                </tbody></table></div>
+                <div className="sm-actions"><button className="sm-btn" disabled={updateBusy} onClick={() => setUpdateReview(null)}>Back</button>
+                    <button className="sm-btn dark" disabled={updateBusy} onClick={confirmUpdate}>{updateBusy ? 'Saving…' : updateReason === 'DEACTIVATE' ? 'Confirm deactivation' : 'Confirm updates'}</button></div>
+            </>}
+        </Modal>}
+        {history && <Modal title={`Edit history · ${history.name}`} onClose={() => setHistory(null)}>
+            {history.error && <p role="alert" className="sm-alert error">{history.error}</p>}
+            {history.loading ? <p>Loading history…</p> : !history.rows.length ? <p>No recorded edits yet. Edits made before this feature are not included.</p> : <div className="sm-update-preview">
+                {history.rows.map(entry => <article className="sm-history-entry" key={entry.id}>
+                    <strong>{updateReasons[entry.reason] || entry.reason}</strong>
+                    <p>{datePHT(entry.changed_at)} · {entry.changed_by || 'Administrator'}</p>
+                    <p>{changesLabel(entry.before_values, entry.after_values)}</p>
+                    {entry.note && <p className="sm-update-note">Note: {entry.note}</p>}
+                </article>)}
+                <p>Showing up to 100 most recent changes.</p>
+            </div>}
+        </Modal>}
         {formOpen && <Modal
-            title={editId ? 'Edit Student' : 'Individual Student Registration'}
+            title="Individual Student Registration"
             onClose={() => {
                 return setFormOpen(false)
             }}
@@ -474,24 +804,15 @@ export default function StudentManagement({
                 <div className="sm-panel-head">
                     <div>
                         <h2>
-                            {editId ? 'Edit Student' : 'Register Student'}
+                            Register Student
                         </h2>
 
                         <p>
-                            {editId ? 'Existing QR token is preserved.' : 'Registration creates a QR token and one-time activation code.'}
+                            Registration creates a QR token and one-time activation code.
                         </p>
                     </div>
 
-                    {editId && <button
-                        className="sm-btn"
-                        onClick={() => {
-                            setEditId(null)
-                            setForm(blank)
-                            setFormOpen(false)
-                        }}
-                    >
-                        Cancel
-                    </button>}
+
                 </div>
 
                 <form
@@ -535,7 +856,8 @@ export default function StudentManagement({
                         <input
                             required
                             maxLength="50"
-                            placeholder="e.g., 1F1 — year + program letter + section"
+                            placeholder="e.g., F1 — program letter + section"
+                            pattern="[A-Za-z]+[1-9][0-9]*"
                             value={form.section}
                             onChange={event => {
                                 return setForm({
@@ -600,7 +922,7 @@ export default function StudentManagement({
                         className="sm-btn dark"
                         type="submit"
                     >
-                        {editId ? 'Save Changes' : 'Register Student'}
+                        Register Student
                     </button>
                 </form>
             </section>
@@ -721,11 +1043,11 @@ export default function StudentManagement({
                     </span>
                 </label>
 
-                {[['activation_status', 'Activation status', ['PENDING', 'ACTIVATED']], ['course', 'Course', courses], ['year_level', 'Year level', opts.year_levels], ['section', 'Section', null]].map(([key, label, values]) => {
+                {[['section', 'Section', null], ['year_level', 'Year level', opts.year_levels], ['course', 'Course', courses], ['activation_status', 'Account status', ['PENDING', 'ACTIVATED']], ['account_status', 'Account access', ['ACTIVE', 'INACTIVE']]].map(([key, label, values]) => {
                     return <label key={key}>
                         {label}
                         {key === 'section' ? <input
-                            placeholder="e.g., 1F1"
+                            placeholder="e.g., F1"
                             value={filters.section}
                             onChange={event => {
                                 return filter('section', event.target.value)
@@ -744,7 +1066,7 @@ export default function StudentManagement({
                                     key={value}
                                     value={value}
                                 >
-                                    {value}
+                                    {key === 'activation_status' ? (value === 'ACTIVATED' ? 'Activated' : 'Pending activation') : key === 'account_status' ? (value === 'ACTIVE' ? 'Active' : 'Deactivated') : value}
                                 </option>
                             })}
                         </select>}
@@ -754,6 +1076,7 @@ export default function StudentManagement({
                 <button
                     className="sm-btn"
                     onClick={() => {
+                        clearStudentSelection()
                         return setFilters({
                             search: '',
                             account_status: '',
@@ -778,11 +1101,34 @@ export default function StudentManagement({
                 <h2>Student Records</h2>
                 <span>{pagination.total_records || 0} matching students</span>
             </div>
+            <div className="sm-selection-toolbar">
+                <button type="button" className="sm-btn" aria-pressed={multipleEdits} onClick={() => {
+                    setMultipleEdits(current => !current)
+                    clearStudentSelection()
+                }}>{multipleEdits ? 'Finish multiple edits' : 'Allow multiple edits'}</button>
+                {multipleEdits && <>
+                <label><input type="checkbox" aria-label="Select students on this page" disabled={loading || selectingMatching || !rows.length}
+                    checked={rows.length > 0 && rows.every(student => selectedIds.includes(Number(student.id)))}
+                    onChange={event => {
+                        setAllMatching(false)
+                        const pageIds = rows.map(student => Number(student.id))
+                        setSelectedIds(current => event.target.checked ? Array.from(new Set([...current, ...pageIds])) : current.filter(id => !pageIds.includes(id)))
+                    }} />Select this page</label>
+                <span>{selectedIds.length} selected</span>
+                {!hasMatchingFilter && <span>Apply a filter to select all matching records.</span>}
+                <button type="button" className="sm-btn" disabled={loading || selectingMatching || !hasMatchingFilter || !pagination.total_records || pagination.total_records > 2000}
+                    onClick={selectMatchingStudents}>{selectingMatching ? 'Selecting matching records…' : `Select all ${pagination.total_records || 0} matching students`}</button>
+                <button type="button" className="sm-btn dark" disabled={loading || selectingMatching || !selectedIds.length} onClick={() => openUpdate()}>Update selected students</button>
+                {(allMatching || selectedIds.length > 0) && <button type="button" className="sm-btn" onClick={clearStudentSelection}>Clear selection</button>}
+                {pagination.total_records > 2000 && <span>Narrow filters to update at most 2,000 students per batch.</span>}
+                </>}
+            </div>
             <div className="sm-table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            {['Student Number', 'Full Name', 'Section', 'Course', 'Year', 'Account', 'Activation', 'Registered At (PHT)', 'Activated At (PHT)', 'Actions'].map(heading => {
+                            {multipleEdits && <th>Select</th>}
+                            {['Student Number', 'Full Name', 'Section', 'Course', 'Year', 'Account', 'Activation', 'Registered At', 'Activated At', 'Actions'].map(heading => {
                                 return <th key={heading}>{heading}</th>
                             })}
                         </tr>
@@ -791,20 +1137,25 @@ export default function StudentManagement({
                     <tbody>
                         {loading ? <tr>
                             <td
-                                colSpan="10"
+                                colSpan={multipleEdits ? 11 : 10}
                                 className="empty"
                             >
                                 Loading...
                             </td>
                         </tr> : !rows.length ? <tr>
                             <td
-                                colSpan="10"
+                                colSpan={multipleEdits ? 11 : 10}
                                 className="empty"
                             >
                                 No student records found.
                             </td>
                         </tr> : rows.map(student => {
                             return <tr key={student.id}>
+                                {multipleEdits && <td><input type="checkbox" aria-label={`Select ${student.full_name}`} disabled={selectingMatching} checked={selectedIds.includes(Number(student.id))}
+                                    onChange={event => {
+                                        setAllMatching(false)
+                                        setSelectedIds(current => event.target.checked ? [...current, Number(student.id)] : current.filter(id => id !== Number(student.id)))
+                                    }} /></td>}
                                 <td>
                                     <b>{student.student_number}</b>
                                 </td>
@@ -828,46 +1179,7 @@ export default function StudentManagement({
                                 <td>{datePHT(student.activated_at)}</td>
                                 <td>
                                     <div className="sm-row-actions">
-                                        <button
-                                            onClick={() => {
-                                                setEditId(student.id)
-                                                setForm({
-                                                    student_number: student.student_number,
-                                                    full_name: student.full_name,
-                                                    section: student.section,
-                                                    course: student.course,
-                                                    year_level: student.year_level
-                                                })
-                                                setFormOpen(true)
-                                            }}
-                                        >
-                                            Edit
-                                        </button>
-
-                                        {student.qr_token_status === 'ACTIVE' && <button
-                                            onClick={() => {
-                                                return showQR(student)
-                                            }}
-                                        >View QR</button>}
-
-                                        {student.activation_status === 'PENDING' && <button
-                                            onClick={() => {
-                                                return action('reveal-code', {
-                                                    id: student.id
-                                                })
-                                            }}
-                                        >
-                                            View Code
-                                        </button>}
-
-                                        {student.activation_status === 'PENDING' && <button
-                                            onClick={() => {
-                                                setDeleteStudent(student)
-                                            }}
-                                        >
-                                            Delete
-                                        </button>}
-
+                                        <button onClick={() => openProfile(student)}>View / Edit profile</button>
                                     </div>
                                 </td>
                             </tr>
@@ -945,6 +1257,7 @@ export default function StudentManagement({
                     })
                     if (result) {
                         setDeleteStudent(null)
+                        closeProfile()
                     }
                 }}
             >Delete Student</button>
@@ -995,50 +1308,5 @@ export default function StudentManagement({
             </div>
         </div>}
 
-        {qr && <div
-            className="sm-overlay"
-            onClick={() => {
-                return setQr(null)
-            }}
-        >
-            <div
-                className="sm-modal qr-modal"
-                onClick={event => {
-                    return event.stopPropagation()
-                }}
-            >
-                <button
-                    className="close"
-                    onClick={() => {
-                        return setQr(null)
-                    }}
-                >
-                    ×
-                </button>
-
-                <h2>Student QR Code</h2>
-
-                <p>
-                    {qr.full_name} · {qr.student_number}
-                </p>
-
-                <img
-                    src={qr.image}
-                    alt="Student QR"
-                />
-
-                <button
-                    className="sm-btn dark"
-                    onClick={() => {
-                        const link = document.createElement('a')
-                        link.href = qr.image
-                        link.download = `QR-${qr.student_number}.png`
-                        link.click()
-                    }}
-                >
-                    Download PNG
-                </button>
-            </div>
-        </div>}
     </main>
 }

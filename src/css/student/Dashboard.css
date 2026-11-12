@@ -132,6 +132,17 @@
     cursor: pointer;
 }
 
+.student-notification-actions, .student-notification-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.student-notification-actions { margin: 16px 0; }
+.student-notification-heading { justify-content: space-between; }
+.student-notification-heading h3 { margin: 0; }
+.student-notification-list { display: grid; gap: 14px; padding: 0; list-style: none; }
+.student-notification-card { margin: 0; overflow-wrap: anywhere; }
+.student-notification-card.is-unread { border-left: 4px solid #2563eb; }
+.student-notification-card p { line-height: 1.6; }
+.student-notification-card time { color: #64748b; font-size: 13px; }
+.student-notification-new { border-radius: 20px; padding: 4px 10px; background: #dbeafe; color: #1e40af; font-size: 12px; font-weight: 700; }
+
 .student-profile-modal {
     max-height: 88vh;
     overflow: auto;

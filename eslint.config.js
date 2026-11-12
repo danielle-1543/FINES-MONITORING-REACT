@@ -14,4 +14,7 @@ export default defineConfig([globalIgnores(['dist']), {
             }
         }
     }
+}, {
+    files: ['public/OneSignalSDKWorker.js'],
+    languageOptions: { globals: globals.serviceworker }
 }])

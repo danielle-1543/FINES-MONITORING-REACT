@@ -1,9 +1,12 @@
+import { askConfirmation } from './utils/confirmation'
 import { useEffect, useState } from 'react'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import Login from './pages/auth/Login'
 import StudentActivation from './pages/auth/StudentActivation'
 import StudentAccount from './pages/student/StudentAccount'
 import OrganizationDashboard from './pages/organization/OrganizationDashboard'
+import { syncPushIdentity } from './utils/pushNotifications'
+import { trackEvent } from './config/posthog'
 export default function App() {
     const [session, setSession] = useState(() => {
         try {
@@ -22,6 +25,17 @@ export default function App() {
             }
         } catch {/* Storage can be disabled by browser settings. */ }
     }, [session])
+    const pushAccessToken =
+        session?.user?.role === 'STUDENT'
+            ? session.tokens.access_token
+            : null
+
+    useEffect(() => {
+        syncPushIdentity(pushAccessToken).catch(error => {
+            console.error('Push account linking failed:', error.message)
+        })
+    }, [pushAccessToken])
+
     const [activation, setActivation] = useState(() => {
         return window.location.hash === '#activate'
     })
@@ -88,7 +102,20 @@ export default function App() {
         setActivation(value)
         window.history.replaceState(null, '', window.location.pathname + window.location.search + (value ? '#activate' : ''))
     }
-    function logout(message) {
+    async function logout(message) {
+        if (typeof message !== 'string' && !await askConfirmation({
+            title: 'Log out',
+            message: 'Are you sure you want to log out of your account?',
+            confirmLabel: 'Confirm Logout'
+        })) return
+        if (session?.user) {
+            trackEvent('logout', {
+                role: session.user.role,
+                trigger: typeof message === 'string'
+                    ? 'account_action'
+                    : 'user_action'
+            })
+        }
         const refreshToken = session?.tokens?.refresh_token
         sessionStorage.removeItem('fines-session')
         setSession(null)

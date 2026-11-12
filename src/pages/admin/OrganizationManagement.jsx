@@ -1,3 +1,4 @@
+import { apiRequest } from '../../utils/apiRequest'
 import { useEffect, useRef, useState } from 'react'
 import PasswordInput from '../../components/PasswordInput'
 import { downloadExcel } from '../../utils/exportExcel'
@@ -11,25 +12,10 @@ const blank = {
     organization_programs: [],
     password: ''
 }
-async function request(path, token, body, signal) {
-    const response = await fetch(`/api/admin/organizations${path}`, {
-        method: body ? 'POST' : 'GET',
-        headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${token}`,
-            ...(body ? {
-                'Content-Type': 'application/json'
-            } : {})
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        cache: 'no-store',
-        signal
+function request(path, token, body, signal) {
+    return apiRequest(`/api/admin/organizations${path}`, token, body || undefined, signal, {
+        failureMessage: 'Unable to load organizations.'
     })
-    const data = await response.json()
-    if (!response.ok || !data.success) {
-        throw new Error(data.message || data.error || 'Unable to load organizations.')
-    }
-    return data
 }
 function OrganizationForm({
     initial,

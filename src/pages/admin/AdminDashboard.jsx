@@ -1,14 +1,139 @@
+import StatisticsChart from '../../components/StatisticsChart'
 import AccountSettings from '../../components/AccountSettings'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import StudentManagement from './StudentManagement'
 import OrganizationManagement from './OrganizationManagement'
 import PortalLayout from '../../components/PortalLayout'
+
 import '../../css/admin/Dashboard.css'
+const activityMetrics = [
+    ['login_success', 'Successful logins'],
+    ['login_failed', 'Failed logins'],
+    ['logout', 'Logouts'],
+    ['account_activated', 'Account activations']
+]
+const featureLabels = {
+    dashboard: 'Dashboard', students: 'Student management', organizations: 'Organizations',
+    profile: 'Account settings', notifications: 'Notifications', attendance: 'Attendance',
+    violations: 'Violations', payments: 'Payments', fines: 'Fines', events: 'Events',
+    unknown: 'Other feature'
+}
+function SystemActivityAnalytics({ accessToken }) {
+    const [days, setDays] = useState('7')
+    const [environment, setEnvironment] = useState('all')
+    const [report, setReport] = useState(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState('')
+    const [version, setVersion] = useState(0)
+    const forceRefresh = useRef(false)
+    useEffect(() => {
+        const timer = setInterval(() => {
+            if (document.visibilityState === 'visible') setVersion(v => v + 1)
+        }, 60000)
+        return () => clearInterval(timer)
+    }, [])
+    useEffect(() => {
+        const controller = new AbortController()
+        const refresh = forceRefresh.current
+        forceRefresh.current = false
+        async function load() {
+            try {
+                const query = new URLSearchParams({ days, environment, refresh: refresh ? '1' : '0' })
+                const response = await fetch(`/api/admin/dashboard/analytics?${query}`, {
+                    headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}` },
+                    cache: 'no-store', signal: controller.signal
+                })
+                const result = await response.json()
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || result.message || 'Unable to load activity analytics.')
+                }
+                if (!controller.signal.aborted) {
+                    setReport(result.data)
+                    setError('')
+                }
+            } catch (err) {
+                if (!controller.signal.aborted) setError(err.message)
+            } finally {
+                if (!controller.signal.aborted) setLoading(false)
+            }
+        }
+        void load()
+        return () => controller.abort()
+    }, [accessToken, days, environment, version])
+    const current = report && report.days === Number(days) && report.environment === environment ? report : null
+    const peak = Math.max(1, ...(current?.daily.map(item => item.count) || []))
+    return <section className="admin-analytics" aria-labelledby="admin-analytics-title" aria-busy={loading}>
+        <div className="admin-dashboard-heading">
+            <div>
+                <h3 id="admin-analytics-title">System Activity Analytics</h3>
+                <p>PostHog activity across student, organization, and admin accounts.</p>
+            </div>
+            <div className="admin-analytics-filters">
+                <label>Date range<select value={days} onChange={event => {
+                    setDays(event.target.value)
+                    setLoading(true)
+                    setError('')
+                }}>
+                    <option value="7">Last 7 days</option>
+                    <option value="30">Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                </select></label>
+                <label>Environment<select value={environment} onChange={event => {
+                    setEnvironment(event.target.value)
+                    setLoading(true)
+                    setError('')
+                }}>
+                    <option value="all">All environments</option>
+                    <option value="development">Development</option>
+                    <option value="production">Production</option>
+                </select></label>
+                <button type="button" disabled={loading} onClick={() => {
+                    forceRefresh.current = true
+                    setLoading(true)
+                    setVersion(v => v + 1)
+                }}>{loading ? 'Loading…' : 'Refresh analytics'}</button>
+            </div>
+        </div>
+        {error && <p role="alert" className="admin-analytics-error">{error}{current ? ' Showing the last loaded report.' : ''}</p>}
+        {!current ? <p role="status">{loading ? 'Loading PostHog activity…' : 'Activity analytics is unavailable. Your system statistics are still available above.'}</p> : <>
+            <div className="admin-analytics-metrics">{activityMetrics.map(([key, label]) => <article key={key}>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" aria-hidden="true"><path d={key === 'logout' ? 'M9 5H4v14h5M10 12h11m-4-4 4 4-4 4' : key === 'login_failed' ? 'M6 6l12 12M18 6 6 18' : key === 'account_activated' ? 'm5 12 4 4L19 6' : 'M15 5h5v14h-5M3 12h12m-4-4 4 4-4 4'} /></svg><h4>{label}</h4><strong>{current.counts[key].toLocaleString()}</strong>
+            </article>)}</div>
+            {!current.total_events && <p role="status">No tracked activities for this range and environment yet. Zero means no captured events, not necessarily no system usage.</p>}
+            <div className="admin-analytics-panels">
+                <section>
+                    <h4>Daily activity</h4>
+                    <p>{current.total_events.toLocaleString()} tracked events</p>
+                    <div className="admin-analytics-chart-scroll">
+                        <div className="admin-analytics-chart" role="img" aria-label={`Daily tracked activity from ${current.from_date} to ${current.to_date}. Exact counts are available below.`}
+                            style={{ gridTemplateColumns: `repeat(${current.daily.length}, minmax(8px, 1fr))` }}>
+                            {current.daily.map(item => <div className="admin-analytics-column" key={item.date} title={`${item.date}: ${item.count} events`}>
+                                <span style={{ height: `${item.count / peak * 100}%` }} />
+                            </div>)}
+                        </div>
+                    </div>
+                    <div className="admin-analytics-axis"><span>{current.from_date}</span><span>{current.to_date}</span></div>
+                    <details><summary>View daily counts</summary><div className="admin-activity-table"><table>
+                        <thead><tr><th>Date</th><th>Tracked events</th></tr></thead>
+                        <tbody>{current.daily.map(item => <tr key={item.date}><td>{item.date}</td><td>{item.count.toLocaleString()}</td></tr>)}</tbody>
+                    </table></div></details>
+                </section>
+                <section>
+                    <h4>Most-used features</h4>
+                    <StatisticsChart title="Feature usage" unit="Uses" population="recorded feature uses" values={current.features.map(item => ({
+                        label: featureLabels[item.feature] || item.feature, count: item.count
+                    }))} />
+                </section>
+            </div>
+            <p className="admin-analytics-note">Last retrieved {new Date(current.updated_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}. Updates automatically every minute while this page is visible. Refresh analytics requests a fresh report; newly captured events may take time to appear. Counts represent captured actions, not unique people or financial totals.</p>
+        </>}
+    </section>
+}
 function Overview({
     accessToken,
     username
 }) {
-    const [course, setCourse] = useState('')
+
     const [page, setPage] = useState(1)
     const [version, setVersion] = useState(0)
     const [data, setData] = useState(null)
@@ -29,7 +154,7 @@ function Overview({
         async function load() {
             try {
                 const query = new URLSearchParams({
-                    course,
+
                     page
                 })
                 const response = await fetch(`/api/admin/dashboard?${query}`, {
@@ -60,77 +185,26 @@ function Overview({
         return () => {
             return controller.abort()
         }
-    }, [course, page, accessToken, version])
-    return <section className="admin-dashboard">
+    }, [page, accessToken, version])
+    return <section className="admin-dashboard" aria-busy={loading}>
         <h2 className="admin-greeting">Mabuhay, {username?.toLowerCase() === 'admin' ? 'Admin' : username || 'Admin'}!</h2>
         {error && <p role="alert">{error}</p>}
-        {!data ? <p>{error ? 'Dashboard unavailable. Please reload the page.' : 'Loading dashboard...'}</p> : <>
-            <div className="admin-stat-grid">
-                <section className="admin-stat-card">
-                    <div className="admin-stat-heading">
-                        <div className="admin-stat-title">
-                            <span className="admin-stat-icon">
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.6"
-                                    aria-hidden="true"
-                                >
-                                    <path
-                                        d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6 21v-2a6 6 0 0 1 12 0v2M18 9a2.5 2.5 0 0 1 0 5m3 7v-2a5 5 0 0 0-2-4M6 9a2.5 2.5 0 0 0 0 5m-3 7v-2a5 5 0 0 1 2-4"
-                                    />
-                                </svg>
-                            </span>
-                            <h3>Students</h3>
-                        </div>
-                        <label>Course <select
-                            value={course}
-                            onChange={e => {
-                                setCourse(e.target.value)
-                                setLoading(true)
-                            }}
-                        >
-                            <option value="">All courses</option>
-                            {data.courses.map(value => {
-                                return <option
-                                    key={value}
-                                    value={value}
-                                >{value}</option>
-                            })}
-                        </select></label>
-                    </div>
-                    <p
-                        className="admin-stat-number"
-                        aria-live="polite"
-                    >{loading ? '...' : data.student_count.toLocaleString()}</p>
-                    <div className="admin-stat-foot">
-                        <span className="admin-course-tag">{course || 'All courses'}</span>
-                        <span>Registered students</span>
-                    </div>
-                </section>
-                <section className="admin-stat-card">
-                    <div className="admin-stat-title">
-                        <span className="admin-stat-icon">
-                            <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.6"
-                                aria-hidden="true"
-                            >
-                                <path d="m3 8 9-5 9 5v3H3V8ZM3 21h18M5 11v10m5-10v10m4-10v10m5-10v10" />
-                            </svg>
-                        </span>
-                        <h3>Organizations</h3>
-                    </div>
-                    <p className="admin-stat-number">{data.organization_count.toLocaleString()}</p>
-                    <div className="admin-stat-foot">
-                        <span className="admin-course-tag">Campus-wide</span>
-                        <span>Includes USG</span>
-                    </div>
-                </section>
-            </div>
+        {!data && <p>{error ? 'Dashboard unavailable. Please reload the page.' : 'Loading dashboard...'}</p>}
+        {data && <>
+            <section className="statistics-grid" aria-label="Student accounts">
+                <StatisticsChart title="Student Distribution by Course" donut unit="Students" population="registered students" values={data.course_distribution || []} />
+                <StatisticsChart title="Account Activation Status" population="student accounts with an activation status" values={[
+                    { label: 'Pending Activation', count: data.student_statistics.pending },
+                    { label: 'Activated Accounts', count: data.student_statistics.activated }
+                ]} />
+                <StatisticsChart title="Account Status" population="student accounts with an account status" values={[
+                    { label: 'Active Accounts', count: data.student_statistics.active },
+                    { label: 'Inactive Accounts', count: data.student_statistics.inactive }
+                ]} />
+            </section>
+        </>}
+        <SystemActivityAnalytics accessToken={accessToken} />
+        {data && <>
             <section className="admin-activity">
                 <div className="admin-activity-heading">
                     <div>
@@ -143,7 +217,7 @@ function Overview({
                     <table>
                         <thead>
                             <tr>
-                                <th>Date & Time (PHT)</th>
+                                <th>Date & Time</th>
                                 <th>Account</th>
                                 <th>Role</th>
                                 <th>Activity</th>
@@ -197,13 +271,14 @@ export default function AdminDashboard({
     onAccountUpdated
 }) {
     const [activePage, setActivePage] = useState('dashboard')
+
     return <PortalLayout
         className="admin-portal"
         role="Admin"
         account={user?.username || 'Admin'}
         items={[['dashboard', 'Dashboard'], ['students', 'Student Management'], ['organizations', 'Organizations'], ['profile', 'Account Settings']]}
         page={activePage}
-        onNavigate={setActivePage}
+onNavigate={setActivePage}
         onLogout={onLogout}
     >
         {activePage === 'dashboard' && <Overview

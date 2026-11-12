@@ -1,16 +1,34 @@
-# React + Vite
+# FINES Monitoring System — React frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite portal for administrators, organizations, and students.
 
-Currently, two official plugins are available:
+## Local setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Install Node.js and run `npm ci` in this directory.
+2. Configure the PHP/MySQL backend using its README.
+3. Run the backend at `http://127.0.0.1:3000`, or update the proxy target in `vite.config.js`.
+4. Set optional browser configuration in `.env.local`:
 
-## React Compiler
+```dotenv
+VITE_POSTHOG_KEY=your_public_project_token
+VITE_POSTHOG_HOST=https://us.i.posthog.com
+VITE_ONESIGNAL_APP_ID=your_public_app_id
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Use the PostHog host for your project's region. Never put private API keys in `VITE_` variables: they are included in browser code. Restart Vite after environment changes.
 
-## Expanding the ESLint configuration
+Run `npm run dev`, then open `http://localhost:5174`. The fixed port matches the configured web push origin.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Checks and build
+
+- `npm run lint` checks JavaScript and React source.
+- `npm run build` generates the production site in `dist`.
+- `npm run preview` previews that build locally.
+
+## Deployment
+
+Build with `npm ci && npm run build` and publish `dist`. Configure the host to serve the React application for client routes and forward `/api` requests to the PHP backend. Vite's development proxy is not included in production.
+
+Set public environment variables before building. Configure OneSignal for the deployed HTTPS origin and keep the frontend worker available at `/OneSignalSDKWorker.js`. Private PostHog reporting and OneSignal REST keys belong only on the PHP server.
+
+Financial and attendance records remain in MySQL. PostHog supplies usage analytics through the admin API.

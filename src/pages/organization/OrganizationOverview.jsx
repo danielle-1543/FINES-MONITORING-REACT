@@ -1,10 +1,5 @@
+import { money } from '../../utils/format'
 import { useEffect, useState } from 'react'
-const money = value => {
-    return Number(value || 0).toLocaleString('en-PH', {
-        style: 'currency',
-        currency: 'PHP'
-    })
-}
 function Table({
     title,
     rows,
@@ -108,25 +103,25 @@ export default function OrganizationOverview({
                 title="Ongoing & Upcoming Events"
                 rows={data.events}
                 empty="No ongoing or upcoming events."
-                columns={[['name', 'Event'], ['event_status', 'Status'], ['scan_starts_at', 'Starts (PHT)'], ['scan_ends_at', 'Ends (PHT)']]}
+                columns={[['name', 'Event'], ['event_status', 'Status'], ['scan_starts_at', 'Starts'], ['scan_ends_at', 'Ends']]}
             />
             <Table
                 title="Recent Attendance"
                 rows={data.recent_attendance}
                 empty="No attendance recorded."
-                columns={[['full_name', 'Student'], ['student_number', 'Student number'], ['event_name', 'Event'], ['attendance_status', 'Status'], ['recorded_at', 'Recorded (PHT)']]}
+                columns={[['full_name', 'Student'], ['student_number', 'Student number'], ['event_name', 'Event'], ['attendance_status', 'Status'], ['recorded_at', 'Recorded']]}
             />
             <Table
                 title="Recent Violations"
                 rows={data.recent_violations}
                 empty="No violations recorded."
-                columns={[['full_name', 'Student'], ['violation_name', 'Violation'], ['event_name', 'Event'], ['fine_amount', 'Fine', money], ['recorded_at', 'Recorded (PHT)']]}
+                columns={[['full_name', 'Student'], ['violation_name', 'Violation'], ['event_name', 'Event'], ['fine_amount', 'Fine', money], ['recorded_at', 'Recorded']]}
             />
             <Table
                 title="Recent Payment Claims"
                 rows={data.recent_payments}
                 empty="No payment claims submitted."
-                columns={[['full_name', 'Student'], ['amount', 'Amount', money], ['method', 'Method'], ['status', 'Status'], ['submitted_at', 'Submitted (PHT)']]}
+                columns={[['full_name', 'Student'], ['amount', 'Amount', money], ['method', 'Method'], ['status', 'Status'], ['submitted_at', 'Submitted']]}
             />
         </>}
     </>

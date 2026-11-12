@@ -469,7 +469,7 @@ dialog.sm-modal p {
 }
 
 .sm-filter-panel .sm-filters {
-    grid-template-columns: repeat(4,minmax(0,1fr));
+    grid-template-columns: repeat(5,minmax(0,1fr));
     gap: 16px;
     margin: 0;
     align-items: end;
@@ -652,5 +652,139 @@ dialog.sm-modal p {
 
     .sm-filter-actions {
         gap: 10px;
+    }
+}
+.sm-update-form {
+    display: grid;
+    gap: 16px;
+    margin-top: 16px;
+}
+.sm-update-form label {
+    display: grid;
+    gap: 6px;
+}
+.sm-update-form input, .sm-update-form select, .sm-update-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cbd7c6;
+    border-radius: 6px;
+    font: inherit;
+}
+.sm-selection-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+}
+.sm-selection-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sm-update-preview {
+    max-height: 420px;
+    overflow: auto;
+    margin: 16px 0;
+}
+.sm-history-entry {
+    padding: 14px 0;
+    border-bottom: 1px solid #dce5d7;
+}
+.sm-update-note {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.sm-profile-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.sm-modal.sm-profile-modal {
+    width: min(920px, calc(100% - 28px));
+}
+.sm-profile-layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    align-items: start;
+    gap: 32px;
+    margin: 20px 0;
+}
+.sm-profile-information {
+    display: grid;
+    gap: 22px;
+    min-width: 0;
+}
+.sm-profile-section h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: #294e35;
+}
+.sm-profile-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 20px;
+    margin: 0;
+    min-width: 0;
+}
+.sm-profile-details > div {
+    min-width: 0;
+}
+.sm-profile-details dt {
+    font-size: 12px;
+    color: #52624b;
+}
+.sm-profile-details dd {
+    margin: 4px 0 0;
+    font-size: 14px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+.sm-profile-credentials {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+.sm-profile-credentials h3, .sm-profile-credentials p {
+    margin: 0;
+}
+.sm-profile-credentials img {
+    max-width: 100%;
+    height: auto;
+}
+.sm-profile-credentials > p {
+    text-align: center;
+}
+.sm-profile-code {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+.sm-profile-code code {
+    font-size: 18px;
+    user-select: all;
+    overflow-wrap: anywhere;
+}
+.sm-profile-hint {
+    color: #52624b;
+    font-size: 12px;
+}
+.sm-profile-footer {
+    padding-top: 16px;
+    border-top: 1px solid #dce5d7;
+}
+@media (max-width: 700px) {
+    .sm-profile-layout {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 420px) {
+    .sm-profile-details {
+        grid-template-columns: 1fr;
     }
 }

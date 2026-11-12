@@ -1,5 +1,6 @@
 import PasswordInput from '../../components/PasswordInput'
 import { useState } from 'react'
+import { trackEvent } from '../../config/posthog'
 import '../../css/auth/Account.css'
 function Login({
     onLogin,
@@ -41,11 +42,19 @@ function Login({
 
             // LavaLust's API helper may return errors under "error".
             if (!response.ok || data.success !== true) {
+                trackEvent('login_failed', {
+                    reason: response.status === 401
+                        ? 'authentication_rejected'
+                        : 'request_rejected'
+                })
                 throw new Error(data.message || data.error || 'Login failed.')
             }
             if (!data.tokens?.access_token || !data.user) {
                 throw new Error('The login response is missing account or token data.')
             }
+            trackEvent('login_success', {
+                role: data.user.role
+            })
             setPassword('')
             onLogin(data)
         } catch (err) {

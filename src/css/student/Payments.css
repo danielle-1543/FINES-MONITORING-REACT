@@ -129,3 +129,18 @@
     background: #f5faf1;
     font-size: 12px;
 }
+
+.payment-window {
+    display: block;
+    margin-top: 0.35rem;
+}
+
+.payment-schedule-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.payment-schedules {
+    margin-top: 1.25rem;
+}
