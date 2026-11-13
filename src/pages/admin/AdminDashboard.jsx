@@ -1,3 +1,5 @@
+import AcademicSettings from '../../components/AcademicSettings'
+import FineArchives from '../../components/FineArchives'
 import { apiFetch } from '../../utils/apiFetch'
 import StatisticsChart from '../../components/StatisticsChart'
 import AccountSettings from '../../components/AccountSettings'
@@ -277,7 +279,7 @@ export default function AdminDashboard({
         className="admin-portal"
         role="Admin"
         account={user?.username || 'Admin'}
-        items={[['dashboard', 'Dashboard'], ['students', 'Student Management'], ['organizations', 'Organizations'], ['profile', 'Account Settings']]}
+        items={[['dashboard', 'Dashboard'], ['students', 'Student Management'], ['organizations', 'Organizations'], ['academic', 'Academic Settings'], ['archives', 'Fine Archives'], ['profile', 'Account Settings']]}
         page={activePage}
 onNavigate={setActivePage}
         onLogout={onLogout}
@@ -286,6 +288,9 @@ onNavigate={setActivePage}
             accessToken={accessToken}
             username={user?.username}
         />}
+        {activePage === 'academic' && <AcademicSettings accessToken={accessToken} />}
+        {activePage === 'archives' && <FineArchives accessToken={accessToken} role="ADMIN" />}
+        {activePage === 'dashboard' && <FineArchives accessToken={accessToken} role="ADMIN" summaryOnly />}
         {activePage === 'students' && <StudentManagement accessToken={accessToken} />}
         {activePage === 'organizations' && <OrganizationManagement accessToken={accessToken} />}
         {activePage === 'profile' && <AccountSettings

@@ -123,7 +123,7 @@ export default function Payments({
             setError(err.message)
         }
     }
-    async function xenditCheckout(organizationId, claimId = null, resume = false) {
+    async function xenditCheckout(organizationId, claimId = null, resume = false, selection = {}) {
         if (lock.current) return
         lock.current = true
         setBusy(true)
@@ -131,7 +131,7 @@ export default function Payments({
         setNotice('')
         try {
             const result = claimId === null
-                ? await request('student/payments/xendit/checkout', { organization_id: organizationId })
+                ? await request('student/payments/xendit/checkout', { ...selection, organization_id: organizationId })
                 : await request(`student/payments/xendit/status?id=${claimId}`)
             const payment = result.data
             setVersion(v => v + 1)
@@ -208,9 +208,9 @@ export default function Payments({
             accessToken={accessToken}
             onChanged={onChanged}
         />}
-        {!organization && <StudentPaymentWorkspace data={data} busy={busy} requestError={error}
+        {!organization && <StudentPaymentWorkspace data={data} busy={busy} requestError={error} accessToken={accessToken}
             onManualPayment={body => action('student/payments/submit', body)}
-            onXendit={id => xenditCheckout(id)} />}
+            onXendit={(id, selection) => xenditCheckout(id, null, false, selection)} />}
         <section className="student-panel">
             <h3>{organization ? 'Claims to Review' : 'Payment Overview & History'}</h3>
             <div className="payment-counts">{['PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED'].map(v => {

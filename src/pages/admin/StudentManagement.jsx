@@ -1,3 +1,5 @@
+import AcademicPeriodSelect from '../../components/AcademicPeriodSelect'
+import SemesterEnrollment from '../../components/SemesterEnrollment'
 import { apiFetch } from '../../utils/apiFetch'
 import { confirmSensitive } from '../../utils/confirmation'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -158,6 +160,8 @@ export default function StudentManagement({
         total_records: 0,
         per_page: 10
     })
+    const [registrationPeriod, setRegistrationPeriod] = useState('')
+    const [importPeriod, setImportPeriod] = useState('')
     const [form, setForm] = useState(blank)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -174,7 +178,7 @@ export default function StudentManagement({
     const [allMatching, setAllMatching] = useState(false)
     const [selectingMatching, setSelectingMatching] = useState(false)
     const selectionVersion = useRef(0)
-    const hasMatchingFilter = ['search', 'section', 'year_level', 'course', 'activation_status', 'account_status'].some(key => String(filters[key] || '').trim() !== '')
+    const hasMatchingFilter = ['search', 'section', 'year_level', 'course', 'activation_status', 'account_status', 'academic_period_id'].some(key => String(filters[key] || '').trim() !== '')
     const [updateTarget, setUpdateTarget] = useState(null)
     const [updateReason, setUpdateReason] = useState('')
     const [updateChanges, setUpdateChanges] = useState({})
@@ -386,7 +390,7 @@ export default function StudentManagement({
     }
     async function save(event) {
         event.preventDefault()
-        const data = await action('create', form)
+        const data = await action('create', { ...form, academic_period_id: registrationPeriod })
         if (data) {
             setForm(blank)
             setFormOpen(false)
@@ -399,6 +403,7 @@ export default function StudentManagement({
             return
         }
         try {
+            if (!importPeriod) throw new Error('Choose the academic year and semester before importing.')
             if (!/\.xlsx$/i.test(file.name) || file.size > 5242880) {
                 throw new Error('Choose an .xlsx file up to 5 MB.')
             }
@@ -452,11 +457,11 @@ export default function StudentManagement({
                 }
             })
             const result = await action('bulk-import', {
-                rows: dataRows
+                rows: dataRows, academic_period_id: importPeriod
             })
             if (result?.data) {
                 setImportOpen(false)
-                setNotice(`Import complete: ${result.data.created} created, ` + `${result.data.skipped} skipped. ` + `${(result.data.errors || []).join(' ')}`)
+                setNotice(`Import complete: ${result.data.created} created, ` + `${result.data.enrolled || 0} existing students enrolled, ${result.data.skipped} skipped. ` + `${(result.data.errors || []).join(' ')}`)
             }
         } catch (err) {
             setError(err.message)
@@ -642,6 +647,7 @@ export default function StudentManagement({
             </div>
             {profile.error && <p role="alert" className="sm-alert error">{profile.error}</p>}
             {profile.loading && <p role="status">Loading student details, QR, and activation information…</p>}
+            <SemesterEnrollment key={profile.student.id} student={profile.student} accessToken={accessToken} courses={courses} onSaved={async () => { await openProfile(profile.student); await load() }} />
             <div className="sm-profile-layout">
                 <section className="sm-profile-credentials" aria-label="Student QR and activation">
                     <h3>QR Code Management</h3>
@@ -820,6 +826,7 @@ export default function StudentManagement({
                     className="sm-form"
                     onSubmit={save}
                 >
+                    <AcademicPeriodSelect accessToken={accessToken} value={registrationPeriod} onChange={setRegistrationPeriod} required openOnly defaultCurrent />
                     <label>
                         Student Number
                         <input
@@ -935,7 +942,8 @@ export default function StudentManagement({
                 return setImportOpen(false)
             }}
         >
-            <p>Upload an .xlsx file up to 5 MB with at most 500 students.</p>
+            <p>Upload an .xlsx file up to 5 MB with at most 500 students. Existing student numbers are enrolled in the chosen semester without creating another account or QR.</p>
+            <AcademicPeriodSelect accessToken={accessToken} value={importPeriod} onChange={setImportPeriod} required openOnly defaultCurrent />
             <p>
                 <a
                     className="sm-btn"
@@ -949,12 +957,14 @@ export default function StudentManagement({
                 className="sm-alert error"
             >{error}</p>}
             <input
+                disabled={!importPeriod}
                 aria-label="Student Excel file"
                 type="file"
                 accept=".xlsx"
                 onChange={importFile}
             />
         </Modal>}
+        <AcademicPeriodSelect accessToken={accessToken} value={filters.academic_period_id || ''} onChange={value => filter('academic_period_id', value === 'all' ? '' : value)} includeAll />
         <section className="sm-panel sm-filter-panel">
             <div className="sm-panel-head">
                 <div className="sm-filter-heading">

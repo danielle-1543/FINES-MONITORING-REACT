@@ -1,3 +1,4 @@
+import FineArchives from '../../components/FineArchives'
 import { apiFetch } from '../../utils/apiFetch'
 import { money, date } from '../../utils/format'
 import { useEffect, useState } from 'react'
@@ -43,13 +44,14 @@ export default function StudentAccount({
 }) {
     const [data, setData] = useState(null)
     const [error, setError] = useState('')
-    const [page, setPage] = useState(() => window.location.hash === '#payments' ? 'payments' : window.location.hash === '#notifications' ? 'notifications' : 'dashboard')
+    const [page, setPage] = useState(() => window.location.hash === '#payments' ? 'payments' : window.location.hash === '#notifications' ? 'notifications' : window.location.hash === '#archives' ? 'archives' : 'dashboard')
     const [version, setVersion] = useState(0)
     const [unreadCount, setUnreadCount] = useState(0)
     useEffect(() => {
         const navigate = () => {
             if (window.location.hash === '#notifications') setPage('notifications')
             if (window.location.hash === '#payments') setPage('payments')
+            if (window.location.hash === '#archives') setPage('archives')
         }
         window.addEventListener('hashchange', navigate)
         return () => window.removeEventListener('hashchange', navigate)
@@ -93,14 +95,14 @@ export default function StudentAccount({
         role="Student"
         badges={{ notifications: unreadCount }}
         account={user.username}
-        items={[['dashboard', 'Dashboard'], ['notifications', 'Notifications'], ['attendance', 'Attendance History'], ['violations', 'Violation History'], ['payments', 'Payments & Receipts'], ['profile', 'Profile']]}
+        items={[['dashboard', 'Dashboard'], ['notifications', 'Notifications'], ['attendance', 'Attendance History'], ['violations', 'Violation History'], ['payments', 'Payments & Receipts'], ['archives', 'Fine Archives'], ['profile', 'Profile']]}
         page={page}
         onNavigate={setPage}
         onLogout={onLogout}
     >
         <div className="student-content">
             <StudentNotificationCenter accessToken={accessToken} open={page === 'notifications'} onUnreadChange={setUnreadCount} />
-            {page === 'notifications' ? null : page === 'payments' ? <Payments
+            {page === 'notifications' ? null : page === 'archives' ? <FineArchives accessToken={accessToken} /> : page === 'payments' ? <Payments
                 accessToken={accessToken}
                 onChanged={() => {
                     return setVersion(v => {
@@ -125,6 +127,8 @@ export default function StudentAccount({
                 className="account-error"
             >{error}</p> : !data ? <p>Loading your dashboard…</p> : <>
                 <h2 className="portal-greeting">Mabuhay, {data.profile.full_name}!</h2>
+                <FineArchives accessToken={accessToken} summaryOnly />
+                <h3>All-semester totals</h3>
                 <div className="student-summary">
                     <article>
                         <span>Total Violations</span>

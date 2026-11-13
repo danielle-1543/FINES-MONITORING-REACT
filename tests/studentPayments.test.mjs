@@ -6,6 +6,21 @@ const schedule = { id: 1, payment_window: 'OPEN' }
 const fine = (org, amount, extra = {}) => ({ org_user_id: org, organization_name: `Org ${org}`, fine_amount: amount,
     outstanding: amount, pending_amount: '0.00', available_to_claim: amount, payment_window: 'OPEN', payment_period_id: 1, ...extra })
 
+test('semester selection separates balances and keeps classified legacy schedule linkage', () => {
+    const legacy = { id: 1, academic_period_id: null, payment_window: 'OPEN' }
+    const current = { id: 2, academic_period_id: 7, payment_window: 'OPEN' }
+    const data = { organizations: [{ id: 1, schedules: [legacy, current] }], fines: [
+        fine(1, '50.00', { academic_period_id: 6, payment_period_id: 1 }),
+        fine(1, '80.00', { academic_period_id: 7, payment_period_id: 2 })
+    ] }
+    const [old] = paymentOrganizations(data, '6'), [now] = paymentOrganizations(data, '7')
+    assert.equal(old.outstanding, 5000)
+    assert.equal(now.outstanding, 8000)
+    assert.deepEqual(old.schedules, [legacy])
+    assert.deepEqual(now.schedules, [current])
+    assert.equal(paymentOrganizations(data)[0].outstanding, 13000)
+})
+
 test('organization and combined totals are independent of filters and pagination', () => {
     const groups = paymentOrganizations({ organizations: [{ id: 1, organization_name: 'CCS', schedules: [schedule] },
         { id: 2, organization_name: 'USG', schedules: [schedule] }],

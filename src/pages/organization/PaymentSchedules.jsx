@@ -1,9 +1,11 @@
+import AcademicPeriodSelect from '../../components/AcademicPeriodSelect'
 import { apiFetch } from '../../utils/apiFetch'
 import CalendarInput from '../../components/CalendarInput'
 import { useEffect, useState } from 'react'
 import { confirmSensitive } from '../../utils/confirmation'
 const emptySchedule = {
     label: '',
+    academic_period_id: '',
     opens_at: '',
     closes_at: '',
     cap_amount: ''
@@ -105,15 +107,7 @@ export default function PaymentSchedules({
             className="payment-form"
             onSubmit={save}
         >
-            <label>Semester name<input
-                name="label"
-                required
-                maxLength={100}
-                value={form.label}
-                disabled={Boolean(form.id)}
-                onChange={update}
-                placeholder="First Semester AY 2026–2027"
-            /></label>
+            {form.id ? <p>{form.label}</p> : <AcademicPeriodSelect accessToken={accessToken} value={form.academic_period_id} onChange={value => setForm({ ...form, academic_period_id: value })} required openOnly defaultCurrent />}
             <label>Payment opens<CalendarInput
                 name="opens_at"
                 type="datetime-local"
@@ -140,7 +134,7 @@ export default function PaymentSchedules({
                 onChange={update}
                 placeholder="Leave blank for no cap"
             /></label>
-            <p>Fines are included automatically through the original payment closing date, after the previous schedule’s coverage. Covered fines and the cap stay fixed after saving; payment times can be edited.</p>
+            <p>Fines are included only for the selected academic semester. Covered fines and the cap stay fixed after saving; payment times can be edited.</p>
             <div className="payment-schedule-actions">
                 <button
                     disabled={busy}
@@ -177,6 +171,7 @@ export default function PaymentSchedules({
                                 onClick={() => {
                                     setForm({
                                         id: period.id,
+                                        academic_period_id: period.academic_period_id,
                                         label: period.label,
                                         cap_amount: period.cap_amount ?? '',
                                         opens_at: period.opens_at.replace(' ', 'T').slice(0, 16),

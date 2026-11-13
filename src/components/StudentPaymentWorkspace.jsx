@@ -1,3 +1,4 @@
+import AcademicPeriodSelect from './AcademicPeriodSelect'
 import { useEffect, useRef, useState } from 'react'
 import { money, date } from '../utils/format'
 import { paymentOrganizations, paymentBlockReason, paymentPage } from '../utils/studentPayments'
@@ -10,8 +11,11 @@ function Pages({ result, onChange, label }) {
     </nav>
 }
 
-export default function StudentPaymentWorkspace({ data, busy, onManualPayment, onXendit, requestError }) {
-    const groups = paymentOrganizations(data)
+export default function StudentPaymentWorkspace({ data, busy, onManualPayment, onXendit, requestError, accessToken }) {
+    const [period, setPeriod] = useState(() => String(data.current_academic_period_id || 0))
+    const [amount, setAmount] = useState('')
+    const groups = paymentOrganizations(data, period)
+    const previousBalance = paymentOrganizations(data).reduce((sum, group) => sum + group.outstanding, 0) - groups.reduce((sum, group) => sum + group.outstanding, 0)
     const [fineOrg, setFineOrg] = useState('')
     const [finePages, setFinePages] = useState({})
     const [fineStatus, setFineStatus] = useState('ALL')
@@ -39,6 +43,7 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
     const payable = groups.filter(group => !paymentBlockReason(group))
     const openPayment = id => {
         setPayOrg(id)
+        setAmount(((groups.find(group => group.id === id)?.payable || 0) / 100).toFixed(2))
         setMethod('')
         setReference('')
         setProof(null)
@@ -50,13 +55,14 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
         if (!selected || blocked || !method || busy) return
         setError('')
         if (method === 'XENDIT_TEST') {
-            await onXendit(selected.id)
+            await onXendit(selected.id, { academic_period_id: Number(period), amount })
             return
         }
         const body = new FormData()
         body.set('fine_key', 'ALL')
         body.set('organization_id', selected.id)
-        body.set('amount', (selected.payable / 100).toFixed(2))
+        body.set('amount', amount)
+        body.set('academic_period_id', period)
         body.set('method', method)
         body.set('reference_number', reference)
         if (proof) body.set('proof', proof)
@@ -68,6 +74,8 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
         }
     }
     return <>
+        <AcademicPeriodSelect accessToken={accessToken} value={period} onChange={value => { setPeriod(value); setPayOrg(''); setFinePages({}); setSchedulePage(1) }} includeLegacy />
+        <p>Amounts below belong to the selected semester. Other semesters still unpaid: <b>{money(Math.max(0, previousBalance) / 100)}</b>. <a href="#archives">Open Fine Archives</a></p>
         <div className="payment-org-cards">
             <article className="payment-org-card payment-combined-card">
                 <span>Total fines · All organizations</span>
@@ -137,7 +145,7 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
         {selected && <section className="student-panel payment-checkout" tabIndex={-1} ref={checkout} aria-label={`Pay fines to ${selected.name}`}>
             <div className="payment-section-heading"><h3>Pay fines · {selected.name}</h3>
                 <button type="button" disabled={busy} onClick={() => setPayOrg('')}>Close payment form</button></div>
-            <p>Includes the full payable balance for this organization across its open schedules. Caps, discounts, and confirmed payments are applied automatically.</p>
+            <p>Pay all or part of this organization’s available balance in the selected semester. Confirmed payments are allocated to the oldest unpaid fines first.</p>
             {blocked && <p role="alert" className="payment-state-note">{blocked}</p>}
             {error && <p role="alert" className="account-error">{error}</p>}
             {requestError && <p role="alert" className="account-error">{requestError}</p>}
@@ -146,7 +154,7 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
                     {!payable.some(group => group.id === selected.id) && <option value={selected.id}>{selected.name}</option>}
                     {payable.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
                 </select></label>
-                <label>Amount (PHP)<input value={(selected.payable / 100).toFixed(2)} readOnly /></label>
+                <label>Amount to pay (PHP)<input type="number" min="0.01" max={(selected.payable / 100).toFixed(2)} step="0.01" required disabled={busy} value={amount} onChange={event => setAmount(event.target.value)} /></label>
                 <label>Payment method<select required value={method} disabled={busy || Boolean(blocked)} onChange={event => {
                     setMethod(event.target.value); setProof(null); setReference(''); setError('')
                 }}><option value="">Choose payment method</option><option value="CASH">Cash</option>
@@ -160,7 +168,7 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
                     <div className="gcash-test-qr"><h4>{selected.name} · GCash</h4>
                         <img src="/gcash-payment-qr.png" width="240" height="240" alt="GCash payment QR" />
                         <p>Confirm the recipient with {selected.name} before paying.</p>
-                        <strong>{money(selected.payable / 100)}</strong></div>
+                        <strong>{money(amount)}</strong></div>
                     <label>GCash reference number<input required minLength={6} maxLength={100} pattern="[A-Za-z0-9-]{6,100}" value={reference} disabled={busy}
                         onChange={event => setReference(event.target.value)} /></label>
                 </>}

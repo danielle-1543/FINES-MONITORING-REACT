@@ -1,12 +1,13 @@
 const cents = value => Math.round(Number(value || 0) * 100)
 
-export function paymentOrganizations(data) {
+export function paymentOrganizations(data, period = 'all') {
     const groups = new Map()
     for (const org of data.organizations || []) {
         groups.set(String(org.id), { id: String(org.id), name: org.organization_name,
             eligible: true, schedules: org.schedules || [], fines: [], total: 0, originalTotal: 0, outstanding: 0, pending: 0, payable: 0 })
     }
     for (const fine of data.fines || []) {
+        if (period !== 'all' && String(fine.academic_period_id || 0) !== String(period)) continue;
         const id = String(fine.org_user_id)
         if (!groups.has(id)) groups.set(id, { id, name: fine.organization_name, eligible: false,
             schedules: [], fines: [], total: 0, originalTotal: 0, outstanding: 0, pending: 0, payable: 0 })
@@ -20,6 +21,8 @@ export function paymentOrganizations(data) {
         if (fine.payment_window === 'OPEN') group.payable += cents(fine.available_to_claim)
     }
     for (const group of groups.values()) {
+        if (period !== 'all') group.schedules = group.schedules.filter(schedule =>
+            String(schedule.academic_period_id || 0) === String(period) || group.fines.some(fine => String(fine.payment_period_id) === String(schedule.id)))
         group.hasPending = group.pending > 0 || (data.claims || []).some(claim =>
             String(claim.org_user_id) === group.id && claim.status === 'PENDING')
         if (!group.eligible || group.hasPending) group.payable = 0

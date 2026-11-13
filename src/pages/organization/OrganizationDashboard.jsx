@@ -1,3 +1,5 @@
+import AcademicPeriodSelect from '../../components/AcademicPeriodSelect'
+import FineArchives from '../../components/FineArchives'
 import { apiRequest } from '../../utils/apiRequest'
 import CalendarInput from '../../components/CalendarInput'
 import { money } from '../../utils/format'
@@ -129,6 +131,7 @@ function Pagination({
     </div>
 }
 function EventForm({
+    accessToken,
     types,
     initial = emptyEvent,
     onSave,
@@ -158,6 +161,7 @@ function EventForm({
             }
         }}
     >
+        <AcademicPeriodSelect accessToken={accessToken} value={form.academic_period_id || ''} onChange={value => setForm(current => ({ ...current, academic_period_id: value }))} required openOnly defaultCurrent />
         <label>Event name<input
             required
             maxLength={150}
@@ -280,6 +284,7 @@ function ViolationTypes({
     </section>
 }
 function Events({
+    accessToken,
     events,
     types,
     action,
@@ -300,7 +305,7 @@ function Events({
         }}>
             <p>Scanning opens and closes automatically at the scheduled times.</p>
             {error && <p role="alert" className="org-feedback error">{error}</p>}
-            <EventForm types={types} saving={saving}
+            <EventForm accessToken={accessToken} types={types} saving={saving}
                 onCancel={() => setCreating(false)}
                 onSave={async form => {
                     if (await action('events/create', form)) {
@@ -371,7 +376,7 @@ function Events({
                 role="alert"
                 className="org-feedback error"
             >{error}</p>}
-            <EventForm
+            <EventForm accessToken={accessToken}
                 initial={editing}
                 types={types}
                 saving={saving}
@@ -412,7 +417,7 @@ function RecordTable({
                     <th>Section</th>
                     <th>Name</th>
                     <th>Student Number</th>
-                    {includeEvent && <th>Event</th>}
+                    {includeEvent && <th>Event / Semester</th>}
                     {showAttendance && <th>Attendance Status</th>}
                     <th>Recorded Violations</th>
                     <th>Fine (PHP)</th>
@@ -426,7 +431,7 @@ function RecordTable({
                     <td>{record.section}</td>
                     <td>{record.full_name}</td>
                     <td>{record.student_number}</td>
-                    {includeEvent && <td>{record.event_name}</td>}
+                    {includeEvent && <td>{record.event_name}<small className="payment-window">{record.academic_period_label}</small></td>}
                     {showAttendance && <td>{record.attendance_status || '—'}</td>}
                     <td>
                         {record.record_type === 'ATTENDANCE'
@@ -902,6 +907,9 @@ function Records({
     }, [query, page, accessToken])
     return <section className="org-panel">
         <h2>{kind === 'ATTENDANCE' ? 'Attendance' : 'Violations'}</h2>
+        <AcademicPeriodSelect accessToken={accessToken} value={filters.academic_period_id || 'all'} onChange={value => {
+            setFilters(current => ({ ...current, academic_period_id: value })); setPage(1); setLoading(true); setError('')
+        }} includeAll includeLegacy />
         <div className="org-actions">
             {['search', 'section', 'year_level', 'attendance_status'].map(field => <label className="org-field" key={field}>
                 {{ search: 'Search student', section: 'Section', year_level: 'Year Level', attendance_status: 'Attendance Status' }[field]}
@@ -1162,7 +1170,7 @@ export default function OrganizationDashboard({
             setSaving(false)
         }
     }
-    const nav = [['dashboard', 'Dashboard'], ['students', 'Student Records'], ['events', 'Events'], ['attendance', 'Attendance'], ['violations', 'Violations'], ['payments', 'Payments'], ['profile', 'Account Settings']]
+    const nav = [['dashboard', 'Dashboard'], ['students', 'Student Records'], ['events', 'Events'], ['attendance', 'Attendance'], ['violations', 'Violations'], ['payments', 'Payments'], ['archives', 'Fine Archives'], ['profile', 'Account Settings']]
     return <PortalLayout
         className="org-shell"
         role="Organization"
@@ -1200,11 +1208,13 @@ export default function OrganizationDashboard({
                     accessToken={accessToken}
                     organization
                 />}
+                {page === 'archives' && <FineArchives accessToken={accessToken} role="ORGANIZATION" />}
+                {page === 'dashboard' && <FineArchives accessToken={accessToken} role="ORGANIZATION" summaryOnly />}
                 {page === 'students' && <StudentRecords
                     accessToken={accessToken}
                     scope={data.scope}
                 />}
-                {page === 'events' && <Events
+                {page === 'events' && <Events accessToken={accessToken}
                     {...data}
                     action={action}
                     saving={saving}

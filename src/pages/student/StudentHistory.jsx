@@ -1,3 +1,4 @@
+import AcademicPeriodSelect from '../../components/AcademicPeriodSelect'
 import { money, date } from '../../utils/format'
 import CalendarInput from '../../components/CalendarInput'
 import { useEffect, useRef, useState } from 'react'
@@ -83,6 +84,7 @@ export default function StudentHistory({
             >{exporting ? 'Exporting…' : 'Export Excel'}</button>
         </div>
         <p>{kind === 'ATTENDANCE' ? 'Your recorded present/absent attendance, newest first.' : 'All of your recorded violations, including event, standalone and attendance-linked violations.'}</p>
+        <AcademicPeriodSelect accessToken={accessToken} value={filters.academic_period_id || 'all'} onChange={value => change('academic_period_id', value)} includeAll includeLegacy />
         <div className="student-filters">
             <label>Organization<select value={filters.organization_id} onChange={event => change('organization_id', event.target.value)}>
                 <option value="">All organizations</option>
@@ -154,7 +156,7 @@ export default function StudentHistory({
                     </thead>
                     <tbody>{group.rows.map(row => {
                         return <tr key={row.id}>
-                            <td>{row.event_name}</td>
+                            <td>{row.event_name}<small className="payment-window">{row.academic_period_label}</small></td>
                             <td>{row.organization_name}</td>
                             <td>{date(row.recorded_at)}</td>
                             {kind === 'ATTENDANCE' ? <td>{row.attendance_status}</td> : <><td>{row.violation_name || 'Violation'}</td><td>{money(row.fine_amount)}</td><td>{money(row.cap_adjustment)}</td><td>{money(row.paid_amount)}</td><td>{money(row.outstanding)}</td></>}
