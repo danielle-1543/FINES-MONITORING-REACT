@@ -28,7 +28,7 @@ export default function FineArchives({ accessToken, role = 'STUDENT', summaryOnl
         } catch (error) { setError(error.message) } finally { setExporting(false) }
     }
     const summaries = (result?.summaries || []).filter(row => !period || period === 'all' || String(row.academic_period_id) === period)
-    return <section className="student-panel payment-page">
+    return <section className="student-panel payment-page fine-archives">
         <h2>{summaryOnly ? 'Semester fine summary' : 'Fine Archives'}</h2>
         <p>Records remain in their original academic semester after profile changes and payment. Legacy records stay unassigned until reviewed by the administrator.</p>
         <div className="payment-actions">
@@ -38,7 +38,7 @@ export default function FineArchives({ accessToken, role = 'STUDENT', summaryOnl
             {role !== 'STUDENT' && <label>Student database ID (optional)<input type="number" min="1" value={student} onChange={event => { setStudent(event.target.value); setPage(1); setPaymentPage(1) }} /></label>}
         </div>
         {error && <p role="alert">{error}</p>}
-        <div className="student-table"><table><thead><tr><th>Academic semester</th><th>Organization</th><th>Fines</th><th>Original</th><th>After cap/discounts</th><th>Paid</th><th>Pending</th><th>Remaining</th></tr></thead>
+        <div className="student-table fine-summary-table"><table><thead><tr><th>Academic semester</th><th>Organization</th><th>Fines</th><th>Original</th><th>After cap/discounts</th><th>Paid</th><th>Pending</th><th>Remaining</th></tr></thead>
             <tbody>{summaries.map(row => <tr key={`${row.academic_period_id}:${row.org_user_id}`}>
                 <td><button onClick={() => choose(String(row.academic_period_id))}>{row.academic_period_label}</button></td><td>{row.organization_name}</td><td>{row.count}</td>
                 {['original', 'adjusted', 'paid', 'pending', 'outstanding'].map(key => <td key={key}>{money(row[key])}</td>)}

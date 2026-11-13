@@ -1,0 +1,184 @@
+/* Admin-only presentation layer, loaded after the shared theme. */
+.admin-portal {
+    --admin-space: 24px;
+    --admin-control: 42px;
+    --admin-radius: 8px;
+    font-family: Inter, 'Segoe UI', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.admin-portal *, .admin-portal *::before, .admin-portal *::after { box-sizing: border-box; }
+.admin-portal .portal-main { background: #f5f7f4; }
+.admin-portal .portal-content {
+    width: min(100%, 1440px);
+    margin-inline: auto;
+    padding: var(--admin-space);
+    display: flex;
+    flex-direction: column;
+    gap: var(--admin-space);
+}
+.admin-portal .portal-content > :is(section, div),
+.admin-portal .portal-content > .admin-dashboard {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+}
+.admin-portal .portal-content > :is(.student-management, .student-content, .admin-dashboard) { padding: 0; }
+.admin-portal .portal-content > .student-panel { padding: var(--admin-space); }
+.admin-portal .portal-topbar { padding: 16px var(--admin-space); gap: 16px; min-height: 80px; }
+.admin-portal .portal-topbar { padding-inline: max(var(--admin-space), calc((100% - 1440px) / 2 + var(--admin-space))); }
+.admin-portal .portal-page-title { min-width: 0; }
+.admin-portal .portal-topbar h1 { font-size: 20px; line-height: 1.3; }
+.admin-portal .portal-today { margin-left: auto; flex-shrink: 0; font-size: 12px; }
+.admin-portal .portal-sidebar { width: 256px; flex-basis: 256px; padding: 24px 16px 16px; }
+.admin-portal .portal-brand { margin: 0 0 16px; padding: 0 8px 20px; gap: 12px; }
+.admin-portal .portal-brand strong { white-space: nowrap; font-size: 15px; }
+.admin-portal .portal-brand img { flex: 0 0 38px; object-fit: contain; }
+.admin-portal .portal-profile { margin: 0 0 16px; padding: 12px; gap: 12px; border-radius: 8px; }
+.admin-portal .portal-profile > div { min-width: 0; }
+.admin-portal .portal-profile strong { display: block; overflow-wrap: anywhere; font-size: 13px; }
+.admin-portal .portal-profile small { font-size: 12px; }
+.admin-portal .portal-sidebar nav ul { gap: 8px; }
+.admin-portal .portal-sidebar nav button {
+    min-height: 46px; padding: 12px; gap: 12px; border-radius: 8px;
+    font-size: 13px; white-space: nowrap; box-shadow: none; background: transparent;
+}
+.admin-portal .portal-sidebar nav button[aria-current=page] { background: #24452b; box-shadow: inset 3px 0 #d2e5c7; }
+.admin-portal .portal-sidebar nav button[aria-current=page]::after { display: none; }
+.admin-portal .portal-sidebar-footer { margin-top: auto; padding-top: 16px; }
+.admin-portal :is(h1, h2, h3, h4, p) { overflow-wrap: anywhere; }
+.admin-portal :is(.admin-greeting, .sm-head h1, .portal-greeting, .payment-page > h2) {
+    margin: 0 0 8px; padding: 0; font-size: 24px; line-height: 1.3; letter-spacing: -.025em;
+}
+.admin-portal .admin-greeting::before { display: none; }
+.admin-portal :is(.sm-head, .sm-panel-head, .admin-dashboard-heading, .admin-activity-heading, .payment-section-heading) {
+    gap: 16px; flex-wrap: wrap; align-items: center;
+}
+.admin-portal :is(.sm-head, .sm-panel-head, .admin-activity-heading) { margin-bottom: 16px; padding-bottom: 0; }
+.admin-portal :is(h3, .sm-panel-head h2) { font-size: 17px; line-height: 1.4; }
+.admin-portal :is(.sm-head p, .sm-panel-head p, .payment-page > p, .admin-analytics p) { font-size: 13px; color: #526153; margin: 8px 0 16px; }
+.admin-portal :is(label, .sm-form label, .payment-form label) { font-size: 13px; font-weight: 500; }
+.admin-portal label:has(> :is(select, textarea, input:not([type=checkbox]):not([type=radio]))) { display: grid; gap: 8px; min-width: 0; }
+.admin-portal :is(.payment-actions, .payment-form, .admin-period-filter) label { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.admin-portal :is(input:not([type=checkbox]):not([type=radio]), select, textarea) {
+    min-height: var(--admin-control); min-width: 0; max-width: 100%;
+    border-radius: var(--admin-radius); padding: 10px 12px; font: inherit; font-size: 13px;
+}
+.admin-portal :is(input:not([type=checkbox]):not([type=radio]), select) { height: var(--admin-control); }
+.admin-portal :is(input[type=checkbox], input[type=radio]) { flex-shrink: 0; width: 16px; height: 16px; margin: 0; }
+.admin-portal label:has(> input[type=checkbox]) { display: flex; align-items: center; gap: 8px; }
+.admin-portal button { min-height: var(--admin-control); border-radius: 8px; font-size: 13px; padding: 10px 14px; line-height: 1.4; }
+.admin-portal button:hover:not(:disabled) { transform: none; }
+.admin-portal :is(.sm-actions, .account-actions, .student-profile-links, .org-account-form-actions, .sm-registration-actions) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin-portal :is(.sm-actions, .sm-filter-actions) button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.admin-portal button svg { flex-shrink: 0; width: 18px; height: 18px; }
+.admin-portal :is(.sm-summary, .statistics-grid, .admin-analytics-metrics) { margin: 24px 0; gap: 16px; }
+.admin-portal .sm-summary { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.admin-portal .org-account-summary { grid-template-columns: minmax(180px, 260px); }
+.admin-portal :is(.sm-summary article, .admin-analytics-metrics article) { padding: 16px; border-radius: 8px; box-shadow: none; }
+.admin-portal .sm-summary span { margin-bottom: 8px; }
+.admin-portal .sm-summary b, .admin-portal .admin-analytics-metrics strong { font-size: 28px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.admin-portal :is(.sm-panel, .admin-analytics, .admin-activity, .student-panel) { padding: 24px; border-radius: 8px; box-shadow: none; min-width: 0; }
+.admin-portal .sm-panel { margin: 0 0 24px; }
+.admin-portal .sm-panel:last-child { margin-bottom: 0; }
+.admin-portal .sm-filter-panel { padding: 0; }
+.admin-portal .sm-filter-panel .sm-panel-head { margin: 0; padding: 20px 24px; }
+.admin-portal .sm-filter-panel .sm-filters { margin: 0; padding: 20px 24px; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; }
+.admin-portal .sm-filter-panel .org-account-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.admin-portal .sm-filter-panel .sm-search-field { grid-column: 1 / -1; }
+.admin-portal .sm-filter-panel .sm-search-control input { min-height: var(--admin-control); height: var(--admin-control); }
+.admin-portal .admin-period-filter { padding: 20px 24px; border-bottom: 1px solid var(--line); }
+.admin-portal .admin-period-filter label { max-width: 400px; }
+.admin-portal .sm-filters .admin-period-filter { grid-column: 1 / -1; padding: 0; border: 0; }
+.admin-portal :is(.sm-form, .org-account-fields, .sm-update-form) { gap: 16px; }
+.admin-portal .sm-form > label:first-child:has(select) { grid-column: 1 / -1; }
+.admin-portal .sm-modal { padding: 24px; border-radius: 8px; }
+.admin-portal .sm-registration-actions { margin-block: 16px 24px; }
+.admin-portal .statistics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+.admin-portal .statistics-chart { padding: 20px; display: flex; flex-direction: column; border-radius: 8px; }
+.admin-portal .statistics-chart h4 { min-height: 42px; margin: 0 0 16px; font-size: 15px; }
+.admin-portal .statistics-svg-wrap { width: min(100%, 220px); flex-shrink: 0; }
+.admin-portal .statistics-selection { min-height: 76px; padding: 8px 0; }
+.admin-portal .statistics-breakdown { margin-top: auto; padding-top: 16px; }
+.admin-portal .statistics-breakdown[open] { margin-top: 0; }
+.admin-portal .statistics-chart .statistics-legend-button { grid-template-columns: 10px minmax(0, 1fr); padding: 8px; }
+.admin-portal .statistics-value { grid-column: 2; text-align: left; white-space: normal; }
+.admin-portal .statistics-chart > small { display: block; padding-top: 8px; }
+.admin-portal .admin-analytics { margin: 24px 0; }
+.admin-portal .admin-analytics > .admin-dashboard-heading { display: grid; grid-template-columns: 1fr; }
+.admin-portal .admin-analytics-filters { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; }
+.admin-portal .admin-analytics-filters label { min-width: 180px; flex: 1 1 180px; }
+.admin-portal .admin-analytics-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.admin-portal .admin-analytics-panels { gap: 24px; }
+.admin-portal .admin-analytics-axis { gap: 16px; margin: 12px 0 16px; }
+.admin-portal .admin-activity { border-top-width: 1px; }
+.admin-portal :is(.sm-table-wrap, .student-table, .admin-activity-table) { width: 100%; min-width: 0; overflow-x: auto; margin-block: 16px; }
+.admin-portal table { border-collapse: collapse; width: 100%; font-size: 13px; text-align: left; }
+.admin-portal :is(th, td) { padding: 12px 16px; vertical-align: top; line-height: 1.5; }
+.admin-portal th { font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; white-space: nowrap; background: #f4f7f2; }
+.admin-portal td { overflow-wrap: anywhere; }
+.admin-portal .admin-activity table { table-layout: fixed; }
+.admin-portal .admin-activity-date { white-space: normal; }
+.admin-portal .admin-actor { align-items: flex-start; }
+.admin-portal :is(.sm-row-actions, .sm-row-actions button) { min-height: 32px; }
+.admin-portal .sm-row-actions { min-width: 200px; max-width: 260px; gap: 8px; }
+.admin-portal .sm-row-actions button { padding: 6px 8px; font-size: 12px; }
+.admin-portal :is(.sm-pagination, .payment-pagination, .admin-log-pagination) { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 16px; margin-top: 0; }
+.admin-portal :is(.sm-pagination > div, .payment-pagination > span) { flex-wrap: wrap; }
+.admin-portal .payment-actions { display: grid; grid-template-columns: minmax(240px, 2fr) repeat(2, minmax(160px, 1fr)); align-items: end; gap: 16px; margin: 24px 0; }
+.admin-portal .fine-archives td:nth-child(n+3), .admin-portal .fine-archives th:nth-child(n+3) { font-variant-numeric: tabular-nums; }
+.admin-portal .fine-summary-table :is(th, td):nth-child(n+3) { text-align: right; }
+.admin-portal .fine-archives .student-table { margin-bottom: 24px; }
+.admin-portal .payment-section-heading { margin-top: 24px; }
+.admin-portal .academic-period-form { max-width: none; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 16px; margin-block: 24px; }
+.admin-portal .academic-period-form > p { grid-column: 1 / -1; grid-row: 2; margin: 0; font-size: 13px; color: #526153; }
+.admin-portal .academic-period-form > label:has(input[type=checkbox]) { min-height: 42px; }
+.admin-portal .academic-period-form > button { justify-self: end; }
+.admin-portal .academic-legacy-section { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 24px; }
+.admin-portal .academic-legacy-section h3 { margin: 0 0 8px; }
+.admin-portal .academic-legacy-section .payment-form { max-width: none; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 16px; }
+.admin-portal .academic-legacy-section .payment-form > :is(p, button) { grid-column: 1 / -1; justify-self: start; }
+.admin-portal .student-profile-card { margin: 16px 0 0; width: 100%; max-width: 800px; }
+.admin-portal .student-profile-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+.admin-portal .student-profile-card dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.admin-portal :is([role=alert], .sm-alert.error, .account-error, .admin-analytics-error) {
+    padding: 12px 16px; margin-block: 16px; max-width: 100%; min-width: 0;
+    background: #fff2f0; color: #9a291f; border: 1px solid #edc5bf; border-radius: 8px; overflow-wrap: anywhere; white-space: pre-wrap;
+}
+.admin-portal :is([role=status], .account-success) { padding: 12px 16px; margin-block: 16px; border-radius: 8px; overflow-wrap: anywhere; }
+.admin-portal :is(.empty, [aria-busy=true] > p:not([role=alert])) { padding: 20px; text-align: center; }
+@media (max-width: 1100px) {
+    .admin-portal .statistics-grid { grid-template-columns: 1fr; }
+    .admin-portal .statistics-chart { display: grid; grid-template-columns: minmax(180px, 220px) minmax(0, 1fr); gap: 8px 24px; align-content: start; }
+    .admin-portal .statistics-chart h4 { grid-column: 1 / -1; min-height: 0; }
+    .admin-portal .statistics-svg-wrap { grid-row: 2 / span 3; width: 100%; }
+    .admin-portal .statistics-chart:has(.statistics-center) .statistics-breakdown { padding-top: 16px; }
+    .admin-portal .sm-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .admin-portal .org-account-summary { grid-template-columns: minmax(180px, 260px); }
+    .admin-portal .admin-analytics-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .admin-portal .payment-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 650px) {
+    .admin-portal { --admin-space: 16px; }
+    .admin-portal .portal-topbar { flex-wrap: wrap; }
+    .admin-portal .portal-today { width: 100%; padding-left: 56px; }
+    .admin-portal .portal-page-title { flex: 1; }
+    .admin-portal .sm-head { align-items: flex-start; }
+    .admin-portal :is(.sm-filter-panel .sm-filters, .sm-filter-panel .org-account-filters, .payment-actions, .academic-period-form, .academic-legacy-section .payment-form, .student-profile-card dl, .org-account-fields) { grid-template-columns: minmax(0, 1fr); }
+    .admin-portal :is(.sm-panel, .admin-analytics, .admin-activity, .student-panel, .sm-modal) { padding: 16px; }
+    .admin-portal .sm-filter-panel { padding: 0; }
+    .admin-portal :is(.sm-filter-panel .sm-panel-head, .sm-filter-panel .sm-filters, .admin-period-filter) { padding: 16px; }
+    .admin-portal .admin-period-filter label { max-width: none; }
+    .admin-portal .sm-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .admin-portal .org-account-summary { grid-template-columns: 1fr; }
+    .admin-portal .statistics-chart { display: flex; padding: 16px; }
+    .admin-portal .statistics-svg-wrap { width: min(220px, 100%); }
+    .admin-portal .statistics-chart .statistics-breakdown { margin-top: 0; padding-top: 16px; }
+    .admin-portal .academic-period-form > p { grid-row: auto; }
+    .admin-portal .academic-period-form > button { justify-self: stretch; }
+    .admin-portal :is(th, td) { padding: 12px; }
+    .admin-portal .admin-activity table { min-width: 560px; }
+    .admin-portal :is(.sm-pagination, .payment-pagination) { align-items: flex-start; }
+    .admin-portal :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { font-size: 16px; }
+}

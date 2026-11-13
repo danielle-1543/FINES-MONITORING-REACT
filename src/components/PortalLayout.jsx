@@ -45,6 +45,7 @@ export default function PortalLayout({
     onNavigate,
     onLogout,
     className = '',
+    pageDescription,
     children
 }) {
     const [open, setOpen] = useState(() => {
@@ -183,6 +184,7 @@ export default function PortalLayout({
                     <h1>{items.find(([key]) => {
                         return key === page
                     })?.[1] || 'Dashboard'}</h1>
+                    {pageDescription && <p>{pageDescription}</p>}
                     {role !== 'Admin' && <p>{role} · {account}</p>}
                 </div>
                 <time

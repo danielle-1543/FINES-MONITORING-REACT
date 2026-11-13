@@ -281,6 +281,14 @@ export default function AdminDashboard({
         account={user?.username || 'Admin'}
         items={[['dashboard', 'Dashboard'], ['students', 'Student Management'], ['organizations', 'Organizations'], ['academic', 'Academic Settings'], ['archives', 'Fine Archives'], ['profile', 'Account Settings']]}
         page={activePage}
+        pageDescription={{
+            dashboard: 'Student accounts, system activity and semester fine summaries.',
+            students: 'Register students, manage enrollment and maintain account records.',
+            organizations: 'Manage organization accounts and program access.',
+            academic: 'Configure academic periods and review legacy record classifications.',
+            archives: 'Review fine assessments and payment allocations by semester.',
+            profile: 'Manage your administrator account and sign-in details.'
+        }[activePage]}
 onNavigate={setActivePage}
         onLogout={onLogout}
     >

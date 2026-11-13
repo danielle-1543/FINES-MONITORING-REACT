@@ -964,7 +964,6 @@ export default function StudentManagement({
                 onChange={importFile}
             />
         </Modal>}
-        <AcademicPeriodSelect accessToken={accessToken} value={filters.academic_period_id || ''} onChange={value => filter('academic_period_id', value === 'all' ? '' : value)} includeAll />
         <section className="sm-panel sm-filter-panel">
             <div className="sm-panel-head">
                 <div className="sm-filter-heading">
@@ -1026,6 +1025,9 @@ export default function StudentManagement({
                 </div>
             </div>
             <div className="sm-filters">
+                <div className="admin-period-filter">
+                    <AcademicPeriodSelect accessToken={accessToken} value={filters.academic_period_id || ''} onChange={value => filter('academic_period_id', value === 'all' ? '' : value)} includeAll />
+                </div>
                 <label className="sm-search-field">Search students
                     <span className="sm-search-control">
                         <svg

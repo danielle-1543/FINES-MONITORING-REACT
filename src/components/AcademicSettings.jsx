@@ -35,11 +35,11 @@ export default function AcademicSettings({ accessToken }) {
             if (confirm) { setLegacy((await apiRequest('/api/admin/academic-periods/legacy', accessToken)).data); setSelection('') }
         } catch (error) { setError(error.message); setPreview(null) } finally { setBusy(false) }
     }
-    return <section className="student-panel payment-page">
+    return <section className="student-panel payment-page academic-settings">
         <h2>Academic Settings</h2>
         <p>Choose the academic year and semester used for new records. Calendar dates are not required. Changing the current semester never moves old records.</p>
         {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
-        <form className="payment-form" onSubmit={event => { event.preventDefault(); void save(form) }}>
+        <form className="payment-form academic-period-form" onSubmit={event => { event.preventDefault(); void save(form) }}>
             <label>Academic year starts<input type="number" required min="2000" max="2200" value={form.year_start} onChange={event => setForm({ ...form, year_start: event.target.value })} /></label>
             <p>Academic Year {form.year_start}–{Number(form.year_start) + 1}</p>
             <label>Semester<select value={form.term} onChange={event => setForm({ ...form, term: event.target.value })}>
@@ -52,6 +52,7 @@ export default function AcademicSettings({ accessToken }) {
             <tbody>{periods.map(period => <tr key={period.id}><td>{period.label}</td><td>{period.status}</td><td>{Number(period.is_current) ? 'Current' : '—'}</td>
                 <td><button disabled={busy || Boolean(Number(period.is_current))} onClick={() => save({ ...period, is_current: true, status: 'OPEN' })}>Set current</button>{' '}
                     <button disabled={busy} onClick={() => save({ ...period, is_current: false, status: period.status === 'OPEN' ? 'CLOSED' : 'OPEN' })}>{period.status === 'OPEN' ? 'Close semester' : 'Reopen semester'}</button></td></tr>)}</tbody></table></div>
+        <section className="academic-legacy-section">
         <h3>Classify existing legacy records</h3>
         <p>Old records are unassigned until reviewed. Classification preserves original cap rules, amounts, payment allocations, notification IDs and receipts.</p>
         <button disabled={busy} onClick={async () => {
@@ -68,5 +69,6 @@ export default function AcademicSettings({ accessToken }) {
             {preview && <><p>{preview.period}: {preview.scans} attendance records and {preview.violations} violation records.</p>
                 <button disabled={busy} onClick={() => classify(true)}>Confirm classification</button></>}
         </div>}
+        </section>
     </section>
 }
