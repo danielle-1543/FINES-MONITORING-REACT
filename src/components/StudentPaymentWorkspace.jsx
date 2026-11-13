@@ -75,7 +75,7 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
     }
     return <>
         <AcademicPeriodSelect accessToken={accessToken} value={period} onChange={value => { setPeriod(value); setPayOrg(''); setFinePages({}); setSchedulePage(1) }} includeLegacy />
-        <p>Amounts below belong to the selected semester. Other semesters still unpaid: <b>{money(Math.max(0, previousBalance) / 100)}</b>. <a href="#archives">Open Fine Archives</a></p>
+        <p>Amounts below belong to the selected semester. Other semesters still unpaid: <b>{money(Math.max(0, previousBalance) / 100)}</b>. <a href="#archives">Open current-semester Fine Archives</a></p>
         <div className="payment-org-cards">
             <article className="payment-org-card payment-combined-card">
                 <span>Total fines · All organizations</span>

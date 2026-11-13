@@ -1,4 +1,4 @@
-import FineArchives from '../../components/FineArchives'
+import StudentFineArchives from './StudentFineArchives'
 import { apiFetch } from '../../utils/apiFetch'
 import { money, date } from '../../utils/format'
 import { useEffect, useState } from 'react'
@@ -102,7 +102,7 @@ export default function StudentAccount({
     >
         <div className="student-content">
             <StudentNotificationCenter accessToken={accessToken} open={page === 'notifications'} onUnreadChange={setUnreadCount} />
-            {page === 'notifications' ? null : page === 'archives' ? <FineArchives accessToken={accessToken} /> : page === 'payments' ? <Payments
+            {page === 'notifications' ? null : page === 'archives' ? <StudentFineArchives accessToken={accessToken} /> : page === 'payments' ? <Payments
                 accessToken={accessToken}
                 onChanged={() => {
                     return setVersion(v => {
@@ -127,27 +127,6 @@ export default function StudentAccount({
                 className="account-error"
             >{error}</p> : !data ? <p>Loading your dashboard…</p> : <>
                 <h2 className="portal-greeting">Mabuhay, {data.profile.full_name}!</h2>
-                <FineArchives accessToken={accessToken} summaryOnly />
-                <h3>All-semester totals</h3>
-                <div className="student-summary">
-                    <article>
-                        <span>Total Violations</span>
-                        <strong>{data.summary.total_violations}</strong>
-                    </article>
-                    <article>
-                        <span>Total Fines</span>
-                        <strong>{money(data.summary.total_fines)}</strong>
-                    </article>
-                    <article>
-                        <span>Confirmed Payments</span>
-                        <strong>{money(data.summary.paid_amount)}</strong>
-                    </article>
-                    <article>
-                        <span>Outstanding Fines</span>
-                        <strong>{money(data.summary.unpaid_fines)}</strong>
-                    </article>
-                </div>
-                {!data.payments_available && <p className="student-note">Payments are not connected yet. The unpaid total currently includes all recorded fines; payment deductions will appear when payment confirmation is implemented.</p>}
                 <Records
                     title="Recent Attendance"
                     rows={data.recent_attendance}
