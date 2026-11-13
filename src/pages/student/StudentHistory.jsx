@@ -1,4 +1,5 @@
 import { money, date } from '../../utils/format'
+import CalendarInput from '../../components/CalendarInput'
 import { useEffect, useRef, useState } from 'react'
 import { studentRequest } from './studentApi'
 import { downloadExcel } from '../../utils/exportExcel'
@@ -94,14 +95,14 @@ export default function StudentHistory({
                     return change('search', e.target.value)
                 }}
             /></label>
-            <label>From<input
+            <label>From<CalendarInput
                 type="date"
                 value={filters.from}
                 onChange={e => {
                     return change('from', e.target.value)
                 }}
             /></label>
-            <label>To<input
+            <label>To<CalendarInput
                 type="date"
                 value={filters.to}
                 min={filters.from || undefined}

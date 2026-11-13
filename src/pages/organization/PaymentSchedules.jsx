@@ -1,4 +1,5 @@
 import { apiFetch } from '../../utils/apiFetch'
+import CalendarInput from '../../components/CalendarInput'
 import { useEffect, useState } from 'react'
 import { confirmSensitive } from '../../utils/confirmation'
 const emptySchedule = {
@@ -113,14 +114,14 @@ export default function PaymentSchedules({
                 onChange={update}
                 placeholder="First Semester AY 2026–2027"
             /></label>
-            <label>Payment opens<input
+            <label>Payment opens<CalendarInput
                 name="opens_at"
                 type="datetime-local"
                 required
                 value={form.opens_at}
                 onChange={update}
             /></label>
-            <label>Payment closes<input
+            <label>Payment closes<CalendarInput
                 name="closes_at"
                 type="datetime-local"
                 required

@@ -1,4 +1,5 @@
 import { apiRequest } from '../../utils/apiRequest'
+import CalendarInput from '../../components/CalendarInput'
 import { money } from '../../utils/format'
 import OrganizationOverview from './OrganizationOverview'
 import AccountSettings from '../../components/AccountSettings'
@@ -182,12 +183,12 @@ function EventForm({
             required
             {...field('absence_fine_amount')}
         /><small>Charged to rostered students marked absent after the event ends. Enter 0 for no absence fine.</small></label>}
-        <label>Scanning starts<input
+        <label>Scanning starts<CalendarInput
             type="datetime-local"
             required
             {...field('scan_starts_at')}
         /></label>
-        <label>Scanning ends<input
+        <label>Scanning ends<CalendarInput
             type="datetime-local"
             required
             min={form.scan_starts_at || undefined}
