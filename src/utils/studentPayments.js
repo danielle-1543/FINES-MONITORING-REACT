@@ -4,15 +4,17 @@ export function paymentOrganizations(data) {
     const groups = new Map()
     for (const org of data.organizations || []) {
         groups.set(String(org.id), { id: String(org.id), name: org.organization_name,
-            eligible: true, schedules: org.schedules || [], fines: [], total: 0, outstanding: 0, pending: 0, payable: 0 })
+            eligible: true, schedules: org.schedules || [], fines: [], total: 0, originalTotal: 0, outstanding: 0, pending: 0, payable: 0 })
     }
     for (const fine of data.fines || []) {
         const id = String(fine.org_user_id)
         if (!groups.has(id)) groups.set(id, { id, name: fine.organization_name, eligible: false,
-            schedules: [], fines: [], total: 0, outstanding: 0, pending: 0, payable: 0 })
+            schedules: [], fines: [], total: 0, originalTotal: 0, outstanding: 0, pending: 0, payable: 0 })
         const group = groups.get(id)
         group.fines.push(fine)
-        group.total += cents(fine.fine_amount)
+        group.originalTotal += cents(fine.fine_amount)
+        group.total += fine.payable_amount != null ? cents(fine.payable_amount)
+            : Math.max(0, cents(fine.fine_amount) - cents(fine.cap_adjustment) - cents(fine.discount_amount))
         group.outstanding += cents(fine.outstanding)
         group.pending += cents(fine.pending_amount)
         if (fine.payment_window === 'OPEN') group.payable += cents(fine.available_to_claim)

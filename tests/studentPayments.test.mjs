@@ -23,6 +23,30 @@ test('pending claims block only their organization, even when their fine is not 
     assert.equal(groups[1].payable, 2500)
     assert.equal(paymentBlockReason(groups[1], schedule), '')
 })
+
+test('headline total uses the capped amount and retains the original amount after payment', () => {
+    const data = { organizations: [{ id: 1, schedules: [schedule] }], claims: [],
+        fines: [fine(1, '500.00', { payable_amount: '300.00', cap_adjustment: '200.00', outstanding: '300.00', available_to_claim: '300.00' })] }
+    let [group] = paymentOrganizations(data)
+    assert.equal(group.total, 30000)
+    assert.equal(group.originalTotal, 50000)
+    assert.equal(group.outstanding, 30000)
+    data.fines[0] = { ...data.fines[0], paid_amount: '300.00', outstanding: '0.00', available_to_claim: '0.00', payment_status: 'PAID' }
+    ;[group] = paymentOrganizations(data)
+    assert.equal(group.total, 30000)
+    assert.equal(group.originalTotal, 50000)
+    assert.equal(group.outstanding, 0)
+    assert.equal(group.payable, 0)
+})
+
+test('fallback totals subtract both cap reductions and discounts, including zero payable fines', () => {
+    const [group] = paymentOrganizations({ organizations: [{ id: 1, schedules: [schedule] }], fines: [
+        fine(1, '500.00', { cap_adjustment: '200.00', discount_amount: '20.00', outstanding: '280.00' }),
+        fine(1, '100.00', { payable_amount: '0.00', outstanding: '0.00' })
+    ] })
+    assert.equal(group.originalTotal, 60000)
+    assert.equal(group.total, 28000)
+})
 test('historical fines for an ineligible organization cannot become payment choices', () => {
     const [group] = paymentOrganizations({ organizations: [], fines: [fine(3, '10.00')] })
     assert.equal(group.total, 1000)

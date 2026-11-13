@@ -71,13 +71,15 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
         <div className="payment-org-cards">
             <article className="payment-org-card payment-combined-card">
                 <span>Total fines · All organizations</span>
-                <strong>{money(data.summary.total_fines)}</strong>
-                <p>Remaining after payments and reductions: <b>{money(data.summary.outstanding)}</b></p>
+                <strong>{money(groups.reduce((sum, group) => sum + group.total, 0) / 100)}</strong>
+                <p>Original fine amount before cap and discounts: {money(groups.reduce((sum, group) => sum + group.originalTotal, 0) / 100)}</p>
+                <p>Remaining balance: <b>{money(groups.reduce((sum, group) => sum + group.outstanding, 0) / 100)}</b></p>
             </article>
             {groups.map(group => <article className="payment-org-card" key={group.id}>
                 <span>{group.name} · Total fines</span>
                 <strong>{money(group.total / 100)}</strong>
-                <p>Remaining: <b>{money(group.outstanding / 100)}</b> · Pending: {money(group.pending / 100)}</p>
+                <p>Original fine amount before cap and discounts: {money(group.originalTotal / 100)}</p>
+                <p>Remaining balance: <b>{money(group.outstanding / 100)}</b> · Pending: {money(group.pending / 100)}</p>
                 <button type="button" onClick={() => setFineOrg(group.id)}>View fines</button>
             </article>)}
         </div>
