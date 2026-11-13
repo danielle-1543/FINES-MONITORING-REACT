@@ -43,12 +43,13 @@ export default function StudentAccount({
 }) {
     const [data, setData] = useState(null)
     const [error, setError] = useState('')
-    const [page, setPage] = useState(() => window.location.hash === '#notifications' ? 'notifications' : 'dashboard')
+    const [page, setPage] = useState(() => window.location.hash === '#payments' ? 'payments' : window.location.hash === '#notifications' ? 'notifications' : 'dashboard')
     const [version, setVersion] = useState(0)
     const [unreadCount, setUnreadCount] = useState(0)
     useEffect(() => {
         const navigate = () => {
             if (window.location.hash === '#notifications') setPage('notifications')
+            if (window.location.hash === '#payments') setPage('payments')
         }
         window.addEventListener('hashchange', navigate)
         return () => window.removeEventListener('hashchange', navigate)

@@ -1,4 +1,5 @@
 import { apiFetch } from '../../utils/apiFetch'
+import { xenditCheckoutUrl } from '../../utils/xenditCheckout'
 import { confirmSensitive } from '../../utils/confirmation'
 import { money, date } from '../../utils/format'
 import { useEffect, useRef, useState } from 'react'
@@ -12,7 +13,8 @@ export default function Payments({
 }) {
     const [data, setData] = useState(null),
         [error, setError] = useState(''),
-        [notice, setNotice] = useState('')
+        [notice, setNotice] = useState(() => new URLSearchParams(window.location.search).has('xendit')
+            ? 'You returned from Xendit test checkout. Payment is confirmed only after provider verification. Refresh or check the pending payment status below.' : '')
     const [version, setVersion] = useState(0),
         [busy, setBusy] = useState(false),
         [status, setStatus] = useState('ALL'),
@@ -124,6 +126,35 @@ export default function Payments({
             setReceipt(result.data)
         } catch (err) {
             setError(err.message)
+        }
+    }
+    async function xenditCheckout(organizationId, claimId = null, resume = false) {
+        if (lock.current) return
+        lock.current = true
+        setBusy(true)
+        setError('')
+        setNotice('')
+        try {
+            const result = claimId === null
+                ? await request('student/payments/xendit/checkout', { organization_id: organizationId })
+                : await request(`student/payments/xendit/status?id=${claimId}`)
+            const payment = result.data
+            setVersion(v => v + 1)
+            onChanged?.()
+            if ((claimId === null || resume) && payment.checkout_url && payment.status === 'PENDING') {
+                window.location.assign(xenditCheckoutUrl(payment.checkout_url))
+            } else {
+                setNotice(payment.status === 'CONFIRMED'
+                    ? 'TEST PAYMENT confirmed. No real funds were collected. Your demo balance and receipt are updated.'
+                    : payment.status === 'CANCELLED' ? 'Test checkout closed without a confirmed payment.'
+                        : 'Test payment is awaiting confirmation. You can resume the existing checkout; do not create another payment.')
+            }
+        } catch (err) {
+            setError(err.message || 'Unable to open Xendit checkout.')
+            setVersion(v => v + 1)
+        } finally {
+            lock.current = false
+            setBusy(false)
         }
     }
     async function getProof(id) {
@@ -278,6 +309,15 @@ export default function Payments({
                 </div>
                 </section>)}
                 {!data.fines.length && <p>No fines recorded.</p>}
+            </section>
+            <section className="student-panel">
+                <h3>Pay with Xendit — Test Mode</h3>
+                <p>Simulation only: no real money is collected. A successful test payment updates this system’s demo balance and creates a TEST receipt.</p>
+                {payableGroups.map(group => <button key={group.org_user_id} type="button" disabled={busy}
+                    onClick={() => xenditCheckout(group.org_user_id)}>
+                    Pay {group.organization_name} — {money((group.cents / 100).toFixed(2))} via Xendit Test
+                </button>)}
+                {!payableGroups.length && <p>No balance is currently available for a new checkout. Check pending payments or payment schedules.</p>}
             </section>
             <section className="student-panel">
                 <h3>Submit a Payment Claim</h3>
@@ -466,7 +506,11 @@ export default function Payments({
                                             return showReceipt(c.id)
                                         }}
                                     >View Receipt</button>}
-                                    {c.status === 'PENDING' && (organization ? <button
+                                    {c.status === 'PENDING' && c.method === 'XENDIT_TEST' && (organization
+                                        ? <span>Awaiting Xendit test confirmation</span>
+                                        : <><button type="button" disabled={busy} onClick={() => xenditCheckout(null, c.id)}>Check Xendit status</button>
+                                            <button type="button" disabled={busy} onClick={() => xenditCheckout(null, c.id, true)}>Resume test checkout</button></>)}
+                                    {c.status === 'PENDING' && c.method !== 'XENDIT_TEST' && (organization ? <button
                                         disabled={busy}
                                         onClick={() => {
                                             setReview(c)
@@ -538,7 +582,7 @@ export default function Payments({
             onCancel={() => {
                 return setReceipt(null)
             }}
-        >{receipt && <><h2>Confirmed Payment Receipt</h2><dl>{Object.entries(receipt).map(([key, value]) => {
+        >{receipt && <><h2>{receipt.method === 'XENDIT_TEST' ? 'TEST PAYMENT RECEIPT — No real funds collected' : 'Confirmed Payment Receipt'}</h2><dl>{Object.entries(receipt).map(([key, value]) => {
             return <div key={key}>
                 <dt>{key.replaceAll('_', ' ')}</dt>
                 <dd>{key === 'amount' ? money(value) : value || '—'}</dd>
