@@ -1,4 +1,4 @@
-import { apiFetch } from '../../utils/apiFetch'
+import { apiRequest } from '../../utils/apiRequest'
 import { money } from '../../utils/format'
 import { useEffect, useState } from 'react'
 function Table({
@@ -45,18 +45,11 @@ export default function OrganizationOverview({
     }, [])
     useEffect(() => {
         const controller = new AbortController()
-        apiFetch('/api/org/dashboard', {
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-                Accept: 'application/json'
-            },
-            cache: 'no-store',
-            signal: controller.signal
-        }).then(async response => {
-            const result = await response.json()
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || result.error || 'Unable to load dashboard.')
-            }
+        apiRequest('/api/org/dashboard', accessToken, undefined, controller.signal, {
+            failureMessage: 'Unable to load dashboard.',
+            invalidResponseMessage: 'The dashboard API returned malformed JSON. Check the backend Render logs.'
+        }).then(result => {
+            if (controller.signal.aborted) return
             setData(result.data)
             setError('')
         }).catch(err => {
@@ -81,7 +74,7 @@ export default function OrganizationOverview({
         {error && <p
             role="alert"
             className="account-error"
-        >{error}</p>}{!data ? <p>Loading dashboard…</p> : <>
+        >{error}</p>}{!data ? <p>{error ? 'Dashboard could not be loaded. Use Refresh to try again.' : 'Loading dashboard…'}</p> : <>
             <div className="student-summary org-dashboard-totals">{[['Students', data.summary.students], ['Attendance · Present', data.summary.present], ['Attendance · Absent', data.summary.absent], ['Recorded violations', data.summary.violations], ['Total fines', money(data.summary.total_fine)], ['Confirmed payments', money(data.summary.paid_amount)], ['Outstanding balance', money(data.summary.outstanding)], ['Pending payment claims', data.summary.pending_claims]].map(([label, value]) => {
                 return <article key={label}>
                     <span>{label}</span>

@@ -215,6 +215,24 @@ export function isPushEnabled(sdk) {
         subscription.id && subscription.token)
 }
 
+export async function withPushTimeout(operation, stage, timeoutMs = 20000) {
+    let timeout
+    try {
+        return await Promise.race([
+            operation(),
+            new Promise((_, reject) => {
+                timeout = window.setTimeout(() => {
+                    const error = new Error(`${stage} timed out. Reload before trying again. If the console shows OneSignal 401 Unauthorized, ask the administrator to check OneSignal Settings > Keys & IDs > Identity Verification and the app configuration.`)
+                    error.code = 'PUSH_TIMEOUT'
+                    reject(error)
+                }, timeoutMs)
+            })
+        ])
+    } finally {
+        window.clearTimeout(timeout)
+    }
+}
+
 export function waitForPushSubscription(sdk, timeoutMs = 15000) {
     if (isPushEnabled(sdk)) return Promise.resolve()
 

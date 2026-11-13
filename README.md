@@ -22,6 +22,7 @@ Run `npm run dev`, then open `http://localhost:5174`. The fixed port matches the
 ## Checks and build
 
 - `npm run lint` checks JavaScript and React source.
+- `npm test` checks API response validation, HTTP errors, timeouts, cancellation, network failures, and payment-proof downloads.
 - `npm run build` generates the production site in `dist`.
 - `npm run preview` previews that build locally.
 
@@ -31,4 +32,16 @@ Build with `npm ci && npm run build` and publish `dist`. On Render, set `VITE_AP
 
 Set public environment variables before building. Configure OneSignal for the deployed HTTPS origin and keep the frontend worker available at `/OneSignalSDKWorker.js`. Private PostHog reporting and OneSignal REST keys belong only on the PHP server.
 
+### OneSignal 401 during registration
+
+If the browser allows notifications but OneSignal `/apps/.../users` returns 401 for `login-user` or `create-subscription`, inspect the failed request's response body. Check **Settings > Keys & IDs > Identity Verification** in the matching OneSignal app. OneSignal currently documents Token Identity Verification as unsupported for Web SDK clients; enabling enforcement blocks their user and subscription requests. See [OneSignal Identity Verification](https://documentation.onesignal.com/docs/en/identity-verification). Use a web-compatible OneSignal app configuration. Keep `VITE_ONESIGNAL_APP_ID` and backend `ONESIGNAL_APP_ID` matched. Do not put a REST API key in the frontend to work around this error.
+
+After correcting OneSignal settings, reload each browser before enabling again: failed SDK operations can remain pending for the page session. The settings panel times out registration/account linking and offers a reload instead of leaving the button on “Please wait…”.
+
 Financial and attendance records remain in MySQL. PostHog supplies usage analytics through the admin API.
+
+## Error handling
+
+Deploy both the frontend and PHP API for the shared handlers. API framework exceptions, fatal errors, missing routes, and database errors return JSON with a failure status and a `request_id`. Search backend logs for that reference to diagnose the underlying problem; the client never receives SQL, stack traces, or file paths from these handlers. Run `php console/test_api_errors.php` in the backend to verify error responses without connecting to the database.
+
+Requests time out after 45 seconds, including response-body reads. Writes are never retried automatically; after a timeout or connection failure, check whether a record was saved before submitting again. Browser cancellation remains silent. Malformed responses show an actionable message. React render failures provide a reload screen, unexpected asynchronous errors show a dismissible notice, and offline browsers show a connection notice. These handlers report failures; underlying database errors and OneSignal configuration still require correction.

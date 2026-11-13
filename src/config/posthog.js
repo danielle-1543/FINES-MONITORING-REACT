@@ -19,6 +19,7 @@ function cleanUrl(value) {
 }
 
 if (analyticsEnabled) {
+    try {
     posthog.init(projectToken, {
         api_host: apiHost,
 
@@ -53,6 +54,9 @@ if (analyticsEnabled) {
             return event
         }
     })
+    } catch {
+        console.warn('Usage analytics could not be initialized.')
+    }
 }
 
 export function trackEvent(eventName, properties = {}) {

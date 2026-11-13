@@ -83,7 +83,7 @@ export default function StudentNotificationCenter({ accessToken, open, onUnreadC
                 <span role="status">{unread} unread</span>
             </div>
             {error && <p role="alert" className="account-error">{error}</p>}
-            {!result ? <p>Loading notifications…</p> : <>
+            {!result ? <p>{error ? 'Notifications could not be loaded. Use Refresh to try again.' : 'Loading notifications…'}</p> : <>
                 {!result.data.length && <div className="student-panel"><h3>No notifications yet</h3><p>New attendance and violation records will appear here.</p></div>}
                 <ul className="student-notification-list">{result.data.map(item => <li key={item.id}>
                     <article className={`student-panel student-notification-card ${item.read_at ? '' : 'is-unread'}`}>

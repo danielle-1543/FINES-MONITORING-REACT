@@ -77,3 +77,15 @@ button {
     margin: 24px auto;
     padding: 20px 24px;
 }
+.app-error-notice {
+    position: sticky;
+    top: 0;
+    z-index: 10000;
+    padding: 12px 20px;
+    background: #fff1f2;
+    color: #881337;
+    border-bottom: 1px solid #fda4af;
+}
+.app-error-notice p { margin: 0 0 8px; }
+.app-error-notice button { margin-right: 12px; }
+.app-error-fallback { max-width: 680px; margin: 10vh auto; padding: 24px; }

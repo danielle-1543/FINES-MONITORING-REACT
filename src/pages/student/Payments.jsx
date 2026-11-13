@@ -129,6 +129,7 @@ export default function Payments({
     async function getProof(id) {
         try {
             const response = await apiFetch(`/api/payments/proof?id=${id}`, {
+                responseType: 'blob',
                 headers: {
                     Authorization: `Bearer ${accessToken}`
                 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getPushSDK, isPushEnabled, syncPushIdentity, waitForPushSubscription } from '../utils/pushNotifications'
+import { getPushSDK, isPushEnabled, syncPushIdentity, waitForPushSubscription, withPushTimeout } from '../utils/pushNotifications'
 
 export default function PushNotificationSettings({ accessToken }) {
     const [sdk, setSdk] = useState(null)
@@ -8,6 +8,7 @@ export default function PushNotificationSettings({ accessToken }) {
     const [busy, setBusy] = useState(true)
     const [error, setError] = useState('')
     const [message, setMessage] = useState('')
+    const [reloadRequired, setReloadRequired] = useState(false)
 
     useEffect(() => {
         let active = true
@@ -71,6 +72,10 @@ export default function PushNotificationSettings({ accessToken }) {
     }, [])
 
     async function toggleNotifications() {
+        if (reloadRequired) {
+            window.location.reload()
+            return
+        }
         if (!sdk) return
 
         setBusy(true)
@@ -79,14 +84,14 @@ export default function PushNotificationSettings({ accessToken }) {
 
         try {
             if (enabled) {
-                await syncPushIdentity(accessToken, false)
+                await withPushTimeout(() => syncPushIdentity(accessToken, false), 'Updating notification preferences')
                 setEnabled(false)
                 setMessage('Notifications are disabled on this browser.')
             } else {
                 // This also registers a missing push token when permission was
                 // already granted. optIn alone only toggles the opt-out flag.
                 // Keep this before network requests to preserve the tap gesture.
-                await sdk.Notifications.requestPermission()
+                await withPushTimeout(() => sdk.Notifications.requestPermission(), 'OneSignal browser registration')
 
                 const currentPermission = window.Notification?.permission || (sdk.Notifications.permission ? 'granted' : 'default')
                 setPermission(currentPermission)
@@ -97,12 +102,15 @@ export default function PushNotificationSettings({ accessToken }) {
                     return
                 }
 
-                await syncPushIdentity(accessToken, true)
+                await withPushTimeout(() => syncPushIdentity(accessToken, true), 'OneSignal account linking')
                 await waitForPushSubscription(sdk)
                 setEnabled(isPushEnabled(sdk))
                 setMessage('Notifications are enabled on this browser.')
             }
         } catch (err) {
+            // A timed-out SDK operation may still be pending internally. Require
+            // a reload rather than queueing more operations behind it.
+            if (err.code === 'PUSH_TIMEOUT') setReloadRequired(true)
             setError(err.message || 'Unable to change notifications.')
         } finally {
             setBusy(false)
@@ -133,6 +141,8 @@ export default function PushNotificationSettings({ accessToken }) {
             >
                 {busy
                     ? 'Please wait…'
+                    : reloadRequired
+                        ? 'Reload notifications'
                     : enabled
                         ? 'Disable notifications'
                         : 'Enable notifications'}
