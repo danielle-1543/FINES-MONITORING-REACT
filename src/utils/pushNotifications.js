@@ -116,7 +116,7 @@ function preserveExistingPreference(sdk) {
 let identityQueue = Promise.resolve()
 let identityVersion = 0
 
-export function syncPushIdentity(accessToken) {
+export function syncPushIdentity(accessToken, enabledPreference) {
     const version = ++identityVersion
 
     const operation = identityQueue.then(async () => {
@@ -184,6 +184,12 @@ export function syncPushIdentity(accessToken) {
 
             if (version !== identityVersion) return
 
+            // Save explicit changes inside the identity queue so a background
+            // token refresh cannot restore the old preference after a click.
+            if (typeof enabledPreference === 'boolean') {
+                rememberPushPreference(sdk, enabledPreference)
+            }
+
             if (readPushPreference(nextIdentity) === true && sdk.Notifications.permission) {
                 await sdk.User.PushSubscription.optIn()
             } else {
@@ -201,4 +207,30 @@ export function syncPushIdentity(accessToken) {
     identityQueue = operation.catch(() => {})
 
     return operation
+}
+
+export function isPushEnabled(sdk) {
+    const subscription = sdk.User.PushSubscription
+    return Boolean(sdk.Notifications.permission && subscription.optedIn &&
+        subscription.id && subscription.token)
+}
+
+export function waitForPushSubscription(sdk, timeoutMs = 15000) {
+    if (isPushEnabled(sdk)) return Promise.resolve()
+
+    return new Promise((resolve, reject) => {
+        const subscription = sdk.User.PushSubscription
+        const finish = () => {
+            if (!isPushEnabled(sdk)) return
+            window.clearTimeout(timeout)
+            subscription.removeEventListener('change', finish)
+            resolve()
+        }
+        const timeout = window.setTimeout(() => {
+            subscription.removeEventListener('change', finish)
+            reject(new Error('Browser permission is allowed, but push registration did not finish. Reload and try Enable notifications again. If this continues, check the OneSignal Site URL and that /OneSignalSDKWorker.js is served as JavaScript on this website.'))
+        }, timeoutMs)
+        subscription.addEventListener('change', finish)
+        finish()
+    })
 }

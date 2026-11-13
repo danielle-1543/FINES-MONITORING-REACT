@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getPushSDK, rememberPushPreference, syncPushIdentity } from '../utils/pushNotifications'
+import { getPushSDK, isPushEnabled, syncPushIdentity, waitForPushSubscription } from '../utils/pushNotifications'
 
 export default function PushNotificationSettings({ accessToken }) {
     const [sdk, setSdk] = useState(null)
@@ -27,10 +27,7 @@ export default function PushNotificationSettings({ accessToken }) {
                     if (!active) return
                     const nativePermission = window.Notification?.permission
                     setPermission(nativePermission || (oneSignal.Notifications.permission ? 'granted' : 'default'))
-                    setEnabled(Boolean(
-                        (nativePermission ? nativePermission === 'granted' : oneSignal.Notifications.permission) &&
-                        oneSignal.User.PushSubscription.optedIn
-                    ))
+                    setEnabled(isPushEnabled(oneSignal))
                 }
 
                 oneSignal.User.PushSubscription.addEventListener(
@@ -82,15 +79,14 @@ export default function PushNotificationSettings({ accessToken }) {
 
         try {
             if (enabled) {
-                await syncPushIdentity(accessToken)
-                await sdk.User.PushSubscription.optOut()
-                rememberPushPreference(sdk, false)
+                await syncPushIdentity(accessToken, false)
                 setEnabled(false)
                 setMessage('Notifications are disabled on this browser.')
             } else {
-                if (window.Notification?.permission !== 'granted') {
-                    await sdk.Notifications.requestPermission()
-                }
+                // This also registers a missing push token when permission was
+                // already granted. optIn alone only toggles the opt-out flag.
+                // Keep this before network requests to preserve the tap gesture.
+                await sdk.Notifications.requestPermission()
 
                 const currentPermission = window.Notification?.permission || (sdk.Notifications.permission ? 'granted' : 'default')
                 setPermission(currentPermission)
@@ -101,15 +97,10 @@ export default function PushNotificationSettings({ accessToken }) {
                     return
                 }
 
-                await syncPushIdentity(accessToken)
-                await sdk.User.PushSubscription.optIn()
-                rememberPushPreference(sdk, true)
-                setEnabled(Boolean(
-                    sdk.User.PushSubscription.optedIn
-                ))
-                setMessage(
-                    'Permission granted. The browser subscription may take a few seconds to finish.'
-                )
+                await syncPushIdentity(accessToken, true)
+                await waitForPushSubscription(sdk)
+                setEnabled(isPushEnabled(sdk))
+                setMessage('Notifications are enabled on this browser.')
             }
         } catch (err) {
             setError(err.message || 'Unable to change notifications.')
