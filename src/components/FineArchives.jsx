@@ -23,7 +23,7 @@ export default function FineArchives({ accessToken, role = 'STUDENT', summaryOnl
             const response = await apiRequest(`/api/fine-archives?${query}&export=1`, accessToken)
             downloadExcel({ data: payments ? response.data.payments : response.data.fines,
                 columns: payments ? { academic_period_label: 'Academic Period', organization_name: 'Organization', student_number: 'Student Number', full_name: 'Student', id: 'Claim ID', fine_key: 'Fine', allocated_amount: 'Allocated Amount', status: 'Status', method: 'Method', reference_number: 'Reference', submitted_at: 'Submitted', reviewed_at: 'Verified' }
-                    : { academic_period_label: 'Academic Period', organization_name: 'Organization', student_number: 'Student Number', full_name: 'Student', enrollment_course: 'Semester Program', enrollment_year_level: 'Semester Year Level', enrollment_section: 'Semester Section', fine_key: 'Fine ID', violation_name: 'Fine', event_name: 'Event', fine_amount: 'Original Amount', payable_amount: 'After Reductions', paid_amount: 'Confirmed Paid', pending_amount: 'Pending', outstanding: 'Outstanding', settlement_status: 'Status', recorded_at: 'Recorded At' }
+                    : { academic_period_label: 'Academic Period', organization_name: 'Organization', student_number: 'Student Number', full_name: 'Student', fine_key: 'Fine ID', violation_name: 'Fine', event_name: 'Event', fine_amount: 'Original Amount', payable_amount: 'After Reductions', paid_amount: 'Confirmed Paid', pending_amount: 'Pending', outstanding: 'Outstanding', settlement_status: 'Status', recorded_at: 'Recorded At' }
             }, payments ? 'semester-payment-allocations.xlsx' : 'fine-archives.xlsx')
         } catch (error) { setError(error.message) } finally { setExporting(false) }
     }
@@ -47,7 +47,7 @@ export default function FineArchives({ accessToken, role = 'STUDENT', summaryOnl
         {!summaryOnly && result && <>
             <div className="payment-section-heading"><h3>Fine assessments</h3><button disabled={exporting} onClick={() => exportRecords()}>Export semester fines</button></div>
             <div className="student-table"><table><thead><tr><th>Student / Semester</th><th>Organization / Fine</th><th>Original</th><th>After reductions</th><th>Paid</th><th>Remaining</th><th>Status</th></tr></thead>
-                <tbody>{result.fines.map(fine => <tr key={fine.fine_key}><td>{fine.full_name}<br />{fine.student_number}<br />{fine.academic_period_label}<br />{fine.enrollment_course} · {fine.enrollment_year_level} · {fine.enrollment_section}</td>
+                <tbody>{result.fines.map(fine => <tr key={fine.fine_key}><td>{fine.full_name}<br />{fine.student_number}<br />{fine.academic_period_label}</td>
                     <td>{fine.organization_name}<br />{fine.violation_name}<br />{fine.event_name}<br />{date(fine.recorded_at)}</td>
                     {['fine_amount', 'payable_amount', 'paid_amount', 'outstanding'].map(key => <td key={key}>{money(fine[key])}</td>)}<td>{fine.settlement_status.replaceAll('_', ' ')}</td></tr>)}</tbody></table></div>
             <nav className="payment-pagination"><span>{result.pagination.total} fines · Page {result.pagination.page} / {result.pagination.pages}</span>

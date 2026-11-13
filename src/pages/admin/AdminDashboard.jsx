@@ -283,7 +283,7 @@ export default function AdminDashboard({
         page={activePage}
         pageDescription={{
             dashboard: 'Student accounts, system activity and semester fine summaries.',
-            students: 'Register students, manage enrollment and maintain account records.',
+            students: 'Register students and update their semester, profile and account records.',
             organizations: 'Manage organization accounts and program access.',
             academic: 'Configure academic periods and review legacy record classifications.',
             archives: 'Review fine assessments and payment allocations by semester.',

@@ -1,5 +1,4 @@
 import AcademicPeriodSelect from '../../components/AcademicPeriodSelect'
-import SemesterEnrollment from '../../components/SemesterEnrollment'
 import { apiFetch } from '../../utils/apiFetch'
 import { confirmSensitive } from '../../utils/confirmation'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -13,6 +12,7 @@ const updateReasons = {
     PROMOTION: 'Year-level update / Promotion',
     RETAINED: 'Retained year level',
     SECTION_CHANGE: 'Change section',
+    SEMESTER_CHANGE: 'Change academic year / semester',
     SHIFT_COURSE: 'Shift course',
     TRANSFERRED_OUT: 'Transferred out',
     DROPPED_OUT: 'Dropped out',
@@ -21,18 +21,20 @@ const updateReasons = {
     REACTIVATE: 'Reactivate account'
 }
 const updateFields = {
-    PROMOTION: ['year_level', 'section'], RETAINED: ['year_level', 'section'],
-    SECTION_CHANGE: ['section'], SHIFT_COURSE: ['course', 'year_level', 'section'],
-    OTHER_CORRECTION: ['student_number', 'full_name', 'year_level', 'section']
+    PROMOTION: ['year_level', 'section', 'current_academic_period_id'], RETAINED: ['year_level', 'section', 'current_academic_period_id'],
+    SEMESTER_CHANGE: ['current_academic_period_id', 'year_level', 'section'],
+    SECTION_CHANGE: ['section'], SHIFT_COURSE: ['course', 'year_level', 'section', 'current_academic_period_id'],
+    OTHER_CORRECTION: ['student_number', 'full_name', 'year_level', 'section', 'current_academic_period_id']
 }
 const fieldLabels = {
     student_number: 'Student number', full_name: 'Full name', course: 'Course',
     year_level: 'Year level', section: 'Section', account_status: 'Account access',
+    current_academic_period_id: 'Academic year / semester',
 }
 function changesLabel(before, after) {
     return Object.keys(fieldLabels).filter(key => before[key] !== after[key]).map(key => {
         const display = value => value || '—'
-        return `${fieldLabels[key]}: ${display(before[key])} → ${display(after[key])}`
+        return `${fieldLabels[key]}: ${display(key === 'current_academic_period_id' ? before.academic_period_label : before[key])} → ${display(key === 'current_academic_period_id' ? after.academic_period_label : after[key])}`
     }).join('; ') || 'Academic details unchanged; reason recorded.'
 }
 const blank = {
@@ -461,7 +463,7 @@ export default function StudentManagement({
             })
             if (result?.data) {
                 setImportOpen(false)
-                setNotice(`Import complete: ${result.data.created} created, ` + `${result.data.enrolled || 0} existing students enrolled, ${result.data.skipped} skipped. ` + `${(result.data.errors || []).join(' ')}`)
+                setNotice(`Import complete: ${result.data.created} created, ${result.data.skipped} skipped. ${(result.data.errors || []).join(' ')}`)
             }
         } catch (err) {
             setError(err.message)
@@ -647,7 +649,6 @@ export default function StudentManagement({
             </div>
             {profile.error && <p role="alert" className="sm-alert error">{profile.error}</p>}
             {profile.loading && <p role="status">Loading student details, QR, and activation information…</p>}
-            <SemesterEnrollment key={profile.student.id} student={profile.student} accessToken={accessToken} courses={courses} onSaved={async () => { await openProfile(profile.student); await load() }} />
             <div className="sm-profile-layout">
                 <section className="sm-profile-credentials" aria-label="Student QR and activation">
                     <h3>QR Code Management</h3>
@@ -754,7 +755,9 @@ export default function StudentManagement({
                         disabled={key === 'DEACTIVATE' && updateTarget.count === 1 && updateTarget.departure !== undefined
                             && !['TRANSFERRED_OUT', 'DROPPED_OUT'].includes(updateTarget.departure)}>{label}</option>)}
                 </select></label>
-                {(updateFields[updateReason] || []).filter(field => updateTarget.count === 1 || !['student_number', 'full_name'].includes(field)).map(field => <label key={field}>
+                {(updateFields[updateReason] || []).filter(field => updateTarget.count === 1 || !['student_number', 'full_name'].includes(field)).map(field => field === 'current_academic_period_id' ? <AcademicPeriodSelect key={field} accessToken={accessToken}
+                    value={updateChanges[field] || ''} onChange={value => setUpdateChanges(current => ({ ...current, [field]: value }))}
+                    openOnly disabled={updateBusy} required={updateReason === 'SEMESTER_CHANGE'} label="Academic year / semester (leave blank to keep current)" /> : <label key={field}>
                     {fieldLabels[field]}
                     {field === 'course' || field === 'year_level' ? <select
                         value={updateChanges[field] ?? updateTarget.existing?.[field] ?? ''} required={field === 'course'} disabled={updateBusy}
@@ -943,7 +946,7 @@ export default function StudentManagement({
                 return setImportOpen(false)
             }}
         >
-            <p>Upload an .xlsx file up to 5 MB with at most 500 students. Existing student numbers are enrolled in the chosen semester without creating another account or QR.</p>
+            <p>Upload an .xlsx file up to 5 MB with at most 500 students. Existing student numbers are skipped. Use Edit Profile or Multiple edits to update their year level, section or semester.</p>
             <AcademicPeriodSelect accessToken={accessToken} value={importPeriod} onChange={setImportPeriod} required openOnly defaultCurrent />
             <p>
                 <a
