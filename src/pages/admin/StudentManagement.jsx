@@ -696,7 +696,8 @@ export default function StudentManagement({
                     {[
                         ['Student Information', [
                             ['Full name', profile.student.full_name], ['Student number', profile.student.student_number],
-                            ['Course', profile.student.course], ['Year level', profile.student.year_level], ['Section', profile.student.section]
+                            ['Course', profile.student.course], ['Year level', profile.student.year_level], ['Section', profile.student.section],
+                            ['Current academic year / semester', profile.student.academic_period_label || 'Not assigned']
                         ]],
                         ['Account Information', [
                             ['Activation status', profile.student.activation_status === 'ACTIVATED' ? 'Activated' : 'Pending activation'],
@@ -1141,7 +1142,7 @@ export default function StudentManagement({
                     <thead>
                         <tr>
                             {multipleEdits && <th>Select</th>}
-                            {['Student Number', 'Full Name', 'Section', 'Course', 'Year', 'Account', 'Activation', 'Registered At', 'Activated At', 'Actions'].map(heading => {
+                            {['Student Number', 'Full Name', 'Section', 'Course', 'Year', 'Academic Year / Semester', 'Account', 'Activation', 'Registered At', 'Activated At', 'Actions'].map(heading => {
                                 return <th key={heading}>{heading}</th>
                             })}
                         </tr>
@@ -1150,14 +1151,14 @@ export default function StudentManagement({
                     <tbody>
                         {loading ? <tr>
                             <td
-                                colSpan={multipleEdits ? 11 : 10}
+                                colSpan={multipleEdits ? 12 : 11}
                                 className="empty"
                             >
                                 Loading...
                             </td>
                         </tr> : !rows.length ? <tr>
                             <td
-                                colSpan={multipleEdits ? 11 : 10}
+                                colSpan={multipleEdits ? 12 : 11}
                                 className="empty"
                             >
                                 No student records found.
@@ -1177,6 +1178,7 @@ export default function StudentManagement({
                                 <td>{student.section || '—'}</td>
                                 <td>{student.course}</td>
                                 <td>{student.year_level}</td>
+                                <td>{student.academic_period_label || 'Not assigned'}</td>
 
                                 <td>
                                     <Badge value={student.account_status} />
