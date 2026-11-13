@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from 'react'
 import { downloadExcel } from '../../utils/exportExcel'
 import '../../css/student/Payments.css'
 import PaymentSchedules from '../organization/PaymentSchedules'
+import StudentPaymentWorkspace from '../../components/StudentPaymentWorkspace'
+import { paymentPage } from '../../utils/studentPayments'
 export default function Payments({
     accessToken,
     organization = false,
@@ -17,15 +19,8 @@ export default function Payments({
             ? 'You returned from Xendit test checkout. Payment is confirmed only after provider verification. Refresh or check the pending payment status below.' : '')
     const [version, setVersion] = useState(0),
         [busy, setBusy] = useState(false),
-        [status, setStatus] = useState('ALL'),
-        [fineStatus, setFineStatus] = useState('ALL')
-    const [form, setForm] = useState({
-        fine_key: '',
-        amount: '',
-        method: 'CASH',
-        reference_number: ''
-    }),
-        [proof, setProof] = useState(null)
+        [status, setStatus] = useState('ALL')
+    const [historyPage, setHistoryPage] = useState(1)
     const [receipt, setReceipt] = useState(null),
         [review, setReview] = useState(null),
         [note, setNote] = useState('')
@@ -189,37 +184,7 @@ export default function Payments({
         </section>
     }
     const claims = organization ? data : data.claims
-    const payableGroups = []
-    if (!organization) {
-        for (const fine of data.fines) {
-            const cents = Math.round(Number(fine.available_to_claim) * 100)
-            if (cents <= 0 || fine.payment_window !== 'OPEN' || data.fines.some(item => String(item.org_user_id) === String(fine.org_user_id) && Number(item.pending_amount) > 0)) {
-                continue
-            }
-            let group = payableGroups.find(item => {
-                return String(item.org_user_id) === String(fine.org_user_id)
-            })
-            if (!group) {
-                group = {
-                    org_user_id: fine.org_user_id,
-                    organization_name: fine.organization_name,
-                    cents: 0,
-                    count: 0
-                }
-                payableGroups.push(group)
-            }
-            group.cents += cents
-            group.count++
-        }
-    }
-    const allGroup = form.fine_key.startsWith('ALL:') ? payableGroups.find(group => {
-        return String(group.org_user_id) === form.fine_key.slice(4)
-    }) : null
-    const selected = !organization && allGroup ? {
-        ...allGroup,
-        available_to_claim: (allGroup.cents / 100).toFixed(2)
-    } : null
-    const enteredAmount = allGroup ? (allGroup.cents / 100).toFixed(2) : ''
+    const history = paymentPage(claims.filter(claim => status === 'ALL' || claim.status === status), historyPage, 10)
     return <section className="payment-page">
         <h2>{organization ? 'Payment Claim Review' : 'Payment Management'}</h2>
         {error && <p
@@ -243,204 +208,9 @@ export default function Payments({
             accessToken={accessToken}
             onChanged={onChanged}
         />}
-        {!organization && <>
-            <div className="student-summary">{[['Total Fines', data.summary.total_fines], ['Amount Due after Reductions', data.summary.outstanding]].map(([label, value]) => {
-                return <article key={label}>
-                    <span>{label}</span>
-                    <strong>{money(value)}</strong>
-                </article>
-            })}</div>
-            <section className="student-panel">
-                <h3>My Fines</h3>
-                <label>Fine status <select
-                    value={fineStatus}
-                    onChange={e => {
-                        return setFineStatus(e.target.value)
-                    }}
-                >{['ALL', 'UNPAID', 'PAID'].map(v => {
-                    return <option
-                        key={v}
-                        value={v}
-                    >{v.replaceAll('_', ' ')}</option>
-                })}</select></label>
-                {Object.values(data.fines.reduce((groups, fine) => {
-                    const group = groups[fine.org_user_id] ||= { name: fine.organization_name, id: fine.org_user_id, fines: [] }
-                    group.fines.push(fine)
-                    return groups
-                }, {})).map(group => <section key={group.id}>
-                    <h3>{group.name}</h3>
-                <div className="student-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Fine / Organization</th>
-                                <th>Total</th>
-                                <th>Cap Reduction</th>
-                                <th>Discounts</th>
-                                <th>Paid</th>
-                                <th>Outstanding</th>
-                                <th>Pending Claims</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>{group.fines.filter(f => {
-                            return fineStatus === 'ALL' || f.payment_status === fineStatus
-                        }).map(f => {
-                            return <tr key={f.fine_key}>
-                                <td>
-                                    {f.violation_name || 'Violation'}
-                                    <br />
-                                    {f.organization_name}
-                                    <br />
-                                    <small>{f.semester_label || 'Semester not scheduled'} — {f.payment_window.replaceAll('_', ' ')}</small>
-                                    {f.opens_at && <small className="payment-window">Pay: {date(f.opens_at)} to {date(f.closes_at)}</small>}
-                                </td>
-                                <td>{money(f.fine_amount)}</td>
-                                <td>{money(f.cap_adjustment)}</td>
-                                <td>{money(f.discount_amount)}</td>
-                                <td>{money(f.paid_amount)}</td>
-                                <td>{money(f.outstanding)}</td>
-                                <td>{money(f.pending_amount)}</td>
-                                <td>{f.payment_status.replaceAll('_', ' ')}</td>
-                            </tr>
-                        })}</tbody>
-                    </table>
-                    {!group.fines.length && <p>No fines recorded.</p>}
-                </div>
-                </section>)}
-                {!data.fines.length && <p>No fines recorded.</p>}
-            </section>
-            <section className="student-panel">
-                <h3>Pay with Xendit — Test Mode</h3>
-                <p>Simulation only: no real money is collected. A successful test payment updates this system’s demo balance and creates a TEST receipt.</p>
-                {payableGroups.map(group => <button key={group.org_user_id} type="button" disabled={busy}
-                    onClick={() => xenditCheckout(group.org_user_id)}>
-                    Pay {group.organization_name} — {money((group.cents / 100).toFixed(2))} via Xendit Test
-                </button>)}
-                {!payableGroups.length && <p>No balance is currently available for a new checkout. Check pending payments or payment schedules.</p>}
-            </section>
-            <section className="student-panel">
-                <h3>Submit a Payment Claim</h3>
-                <p>Pay the full payable balance for one organization during its payment window. Caps and discounts are applied automatically. Your balance updates after the organization confirms payment.</p>
-                {!payableGroups.length && <p>No fines are available for payment right now. Check the schedules above; pending claims already reserve their amounts.</p>}
-                <form
-                    className="payment-form"
-                    onSubmit={async e => {
-                        e.preventDefault()
-                        const element = e.currentTarget
-                        const body = new FormData()
-                        Object.entries(form).forEach(([key, value]) => {
-                            return body.append(key, value)
-                        })
-                        if (allGroup) {
-                            body.set('fine_key', 'ALL')
-                            body.set('organization_id', allGroup.org_user_id)
-                            body.set('amount', enteredAmount)
-                        }
-                        if (proof) {
-                            body.append('proof', proof)
-                        }
-                        if (await action('student/payments/submit', body)) {
-                            setForm({
-                                fine_key: '',
-                                amount: '',
-                                method: 'CASH',
-                                reference_number: ''
-                            })
-                            setProof(null)
-                            element.reset()
-                        }
-                    }}
-                >
-                    <label>Fines to pay<select
-                        required
-                        value={form.fine_key}
-                        onChange={e => {
-                            const value = e.target.value
-                            const group = payableGroups.find(item => {
-                                return `ALL:${item.org_user_id}` === value
-                            })
-                            setForm({
-                                ...form,
-                                fine_key: value,
-                                amount: group ? (group.cents / 100).toFixed(2) : ''
-                            })
-                        }}
-                    >
-                        <option value="">Select organization</option>
-                        <optgroup label="Pay all available fines per organization">{payableGroups.map(group => {
-                            return <option
-                                key={group.org_user_id}
-                                value={`ALL:${group.org_user_id}`}
-                            >{group.organization_name} — all {group.count} fines — {money(group.cents / 100)}</option>
-                        })}</optgroup>
-                    </select></label>
-                    {allGroup && <p className="payment-total-note">Includes every payable attendance and violation fine for {allGroup.organization_name}. Payment must cover the full payable balance for this organization.</p>}
-                    <label>Amount (PHP)<input
-                        type="number"
-                        required
-                        min="0.01"
-                        step="0.01"
-                        readOnly
-                        max={selected?.available_to_claim || '99999999.99'}
-                        value={enteredAmount}
-                    /></label>
-                    <label>Method<select
-                        value={form.method}
-                        onChange={e => {
-                            return setForm({
-                                ...form,
-                                method: e.target.value,
-                                reference_number: ''
-                            })
-                        }}
-                    >
-                        <option value="CASH">Cash</option>
-                        <option value="GCASH">GCash</option>
-                    </select></label>
-                    {form.method === 'GCASH' && <><div className="gcash-test-qr">
-                        <span className="gcash-test-label">QR CODE</span>
-                        <h4>{selected?.organization_name || 'GCash Payment'}</h4>
-                        <img
-                            src="/gcash-payment-qr.png"
-                            width="240"
-                            height="240"
-                            alt=""
-                        />
-                        <p>Scan the QR code to Pay.</p>
-                        {enteredAmount && <strong>{money(enteredAmount)}</strong>}
-                    </div><label>GCash reference number<input
-                        required
-                        maxLength={100}
-                        minLength={6}
-                        value={form.reference_number}
-                        onChange={e => {
-                            return setForm({
-                                ...form,
-                                reference_number: e.target.value
-                            })
-                        }}
-                    /></label></>}
-                    <label>Proof of payment {form.method === 'GCASH' ? '(required)' : '(optional)'}<input
-                        type="file"
-                        required={form.method === 'GCASH'}
-                        accept="image/jpeg,image/png,application/pdf"
-                        onChange={e => {
-                            const file = e.target.files[0]
-                            if (file?.size > 5242880) {
-                                setError('Proof must be 5 MB or smaller.')
-                                e.target.value = ''
-                                setProof(null)
-                            } else {
-                                setProof(file)
-                            }
-                        }}
-                    /></label>
-                    <small>JPEG, PNG or PDF, up to 5 MB. Pending claims reserve their amount to prevent duplicate submissions.</small>
-                    <button disabled={busy || !selected}>{busy ? 'Submitting…' : 'Submit Claim'}</button>
-                </form>
-            </section>
-        </>}
+        {!organization && <StudentPaymentWorkspace data={data} busy={busy} requestError={error}
+            onManualPayment={body => action('student/payments/submit', body)}
+            onXendit={id => xenditCheckout(id)} />}
         <section className="student-panel">
             <h3>{organization ? 'Claims to Review' : 'Payment Overview & History'}</h3>
             <div className="payment-counts">{['PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED'].map(v => {
@@ -451,7 +221,8 @@ export default function Payments({
             <label>Claim status <select
                 value={status}
                 onChange={e => {
-                    return setStatus(e.target.value)
+                    setStatus(e.target.value)
+                    setHistoryPage(1)
                 }}
             >{['ALL', 'PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED'].map(v => {
                 return <option key={v}>{v}</option>
@@ -471,9 +242,7 @@ export default function Payments({
                         </tr>
                     </thead>
                     <tbody>
-                        {claims.filter(c => {
-                            return status === 'ALL' || c.status === status
-                        }).map(c => {
+                        {history.rows.map(c => {
                             return <tr key={c.id}>
                                 {organization && <td>
                                     {c.full_name}
@@ -529,8 +298,13 @@ export default function Payments({
                         })}
                     </tbody>
                 </table>
-                {!claims.length && <p>No payment claims yet.</p>}
+                {!history.total && <p>No payment claims match this filter.</p>}
             </div>
+            <nav className="payment-pagination" aria-label="Payment history pages">
+                <span>{history.total} records · Page {history.page} of {history.pages}</span>
+                <button type="button" disabled={history.page <= 1} onClick={() => setHistoryPage(history.page - 1)}>Previous</button>
+                <button type="button" disabled={history.page >= history.pages} onClick={() => setHistoryPage(history.page + 1)}>Next</button>
+            </nav>
         </section>
         {organization && review && <section className="student-panel">
             <h3>Review Claim #{review.id}</h3>

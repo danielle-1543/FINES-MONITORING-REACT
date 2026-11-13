@@ -144,3 +144,34 @@
 .payment-schedules {
     margin-top: 1.25rem;
 }
+.payment-org-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin: 20px 0;
+}
+.payment-org-card {
+    padding: 20px;
+    border: 1px solid #d8e2d4;
+    border-radius: 12px;
+    background: #fff;
+}
+.payment-org-card > span { display: block; color: #475569; font-weight: 600; }
+.payment-org-card > strong { display: block; font-size: 26px; margin: 12px 0; overflow-wrap: anywhere; }
+.payment-org-card p { color: #475569; font-size: 13px; }
+.payment-combined-card { background: #edf5e9; border-color: #afc8a4; }
+.payment-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+.payment-org-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+.payment-org-tabs button[aria-pressed="false"] { background: #edf2ea; color: #25401d; }
+.payment-org-tabs button[aria-pressed="true"] { background: #315b25; color: #fff; }
+.payment-pagination { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.payment-pagination span { margin-right: auto; font-size: 13px; color: #475569; }
+.payment-state-note { padding: 12px; background: #fff8e7; border-radius: 8px; color: #684a12; }
+.payment-checkout { scroll-margin-top: 24px; border: 2px solid #afc8a4; }
+.payment-checkout:focus { outline: 2px solid #315b25; outline-offset: 3px; }
+@media (max-width: 600px) {
+    .payment-org-cards { grid-template-columns: 1fr; }
+    .payment-org-card > strong { font-size: 24px; }
+    .payment-pagination { justify-content: flex-start; }
+    .payment-pagination span { width: 100%; }
+}
