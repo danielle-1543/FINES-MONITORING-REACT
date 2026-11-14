@@ -788,7 +788,7 @@ function EventScanner({
                 disabled={pending}
             >
                 <legend>{eventId ? 'Violations observed (optional)' : 'Choose violations'}</legend>
-                {!confirmation.violation_types.length && <p>No violation types yet. Create a violation type on the Violations page first.</p>}
+                {confirmation.fines_locked ? <p>New fines are locked while your payment window is open. You can record attendance without adding a fine.</p> : !confirmation.violation_types.length && <p>No violation types yet. Create a violation type on the Violations page first.</p>}
                 {confirmation.violation_types.map(type => {
                     return <label key={type.id}><input
                         type="checkbox"

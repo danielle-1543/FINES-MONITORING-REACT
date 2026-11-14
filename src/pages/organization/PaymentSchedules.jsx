@@ -84,9 +84,11 @@ export default function PaymentSchedules({
             setBusy(false)
         }
     }
+    const semesterSchedule = periods.filter(period => String(period.academic_period_id) === String(form.academic_period_id))
+        .sort((a, b) => Number(a.id) - Number(b.id))[0]
     return <section className="student-panel payment-schedules">
         <h3>Semester Payment Schedules</h3>
-        <p>Set when students can pay your organization. An optional cap covers attendance and violation fines together, per student and semester.</p>
+        <p>Add payment windows for the current semester. New fines are locked for your organization while a window is open; attendance without fines remains available. Students are notified when a window is saved or its times change.</p>
         {error && <p
             role="alert"
             className="account-error"
@@ -102,12 +104,12 @@ export default function PaymentSchedules({
                 setEditing(true)
                 setMessage('')
             }}
-        >Add Semester</button>}
+        >Add Payment Window</button>}
         {editing && <form
             className="payment-form"
             onSubmit={save}
         >
-            {form.id ? <p>{form.label}</p> : <AcademicPeriodSelect accessToken={accessToken} value={form.academic_period_id} onChange={value => setForm({ ...form, academic_period_id: value })} required openOnly defaultCurrent />}
+            {form.id ? <p>{form.label}</p> : <AcademicPeriodSelect accessToken={accessToken} value={form.academic_period_id} onChange={value => setForm({ ...form, academic_period_id: value })} required defaultCurrent readOnly />}
             <label>Payment opens<CalendarInput
                 name="opens_at"
                 type="datetime-local"
@@ -129,12 +131,12 @@ export default function PaymentSchedules({
                 min="0.01"
                 max="99999999.99"
                 step="0.01"
-                value={form.cap_amount}
-                disabled={Boolean(form.id)}
+                value={semesterSchedule ? (semesterSchedule.cap_amount ?? '') : form.cap_amount}
+                disabled={Boolean(form.id) || Boolean(semesterSchedule)}
                 onChange={update}
                 placeholder="Leave blank for no cap"
             /></label>
-            <p>Fines are included only for the selected academic semester. Covered fines and the cap stay fixed after saving; payment times can be edited.</p>
+            <p>Multiple non-overlapping windows are allowed until the administrator changes the current semester. Every window shares the original semester cap and balance; the cap does not reset. Payment times can be edited.</p>
             <div className="payment-schedule-actions">
                 <button
                     disabled={busy}
@@ -184,7 +186,7 @@ export default function PaymentSchedules({
                     </tr>
                 })}</tbody>
             </table>
-            {!periods.length && <p>No semester scheduled yet. Students can view fines, but cannot submit payments until a schedule is open.</p>}
+            {!periods.length && <p>No payment window scheduled yet. Students can view fines, but cannot submit payments until a schedule is open.</p>}
         </div>
     </section>
 }
