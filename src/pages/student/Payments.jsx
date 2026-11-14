@@ -1,3 +1,4 @@
+import RecordStatus from '../../components/RecordStatus'
 import { apiFetch } from '../../utils/apiFetch'
 import { xenditCheckoutUrl } from '../../utils/xenditCheckout'
 import { confirmSensitive } from '../../utils/confirmation'
@@ -257,15 +258,7 @@ export default function Payments({
             role="status"
             className="account-success"
         >{notice}</p>}
-        <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-                return setVersion(v => {
-                    return v + 1
-                })
-            }}
-        >Refresh</button>
+
         {organization && <PaymentSchedules
             accessToken={accessToken}
             onChanged={onChanged}
@@ -280,6 +273,7 @@ export default function Payments({
                     return c.status === v
                 }).length}</span>
             })}</div>
+            <div className="table-toolbar">
             <label>Claim status <select
                 value={status}
                 onChange={e => {
@@ -289,18 +283,28 @@ export default function Payments({
             >{['ALL', 'PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED'].map(v => {
                 return <option key={v}>{v}</option>
             })}</select></label>
+        <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+                return setVersion(v => {
+                    return v + 1
+                })
+            }}
+        >Refresh</button>
+            </div>
             <div className="student-table">
-                <table>
+                <table className="system-table">
                     <thead>
                         <tr>
                             {organization && <th>Student</th>}
                             <th>Organization / Fine</th>
-                            <th>Amount</th>
+                            <th className="table-number">Amount</th>
                             <th>Method / Reference</th>
                             <th>Submitted</th>
                             <th>Reviewed</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th className="table-actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -316,7 +320,7 @@ export default function Payments({
                                     <br />
                                     {Number(c.fine_count) > 0 ? `All fines (${c.fine_count} items)` : c.fine_key}
                                 </td>
-                                <td>{money(c.amount)}</td>
+                                <td className="table-number">{money(c.amount)}</td>
                                 <td>
                                     {c.method}
                                     <br />
@@ -325,7 +329,7 @@ export default function Payments({
                                 <td>{date(c.submitted_at)}</td>
                                 <td>{date(c.reviewed_at)}</td>
                                 <td>
-                                    {c.status}
+                                    <RecordStatus value={c.status} />
                                     {c.review_note && <p>{c.review_note}</p>}
                                 </td>
                                 <td className="payment-actions">

@@ -1,0 +1,220 @@
+/* Shared record presentation. Loaded after role-specific styles. */
+:root {
+    --table-font: .82rem;
+    --table-small: .73rem;
+    --table-cell-y: 10px;
+    --table-cell-x: 12px;
+    --table-line: #e6ebe4;
+    --table-header: #f3f6f1;
+    --table-hover: #f7faf5;
+    --table-muted: #64705f;
+    --table-control-height: 40px;
+    --table-radius: 6px;
+    --table-gap: 10px;
+}
+#root :is(.org-table, .student-table, .sm-table-wrap, .admin-activity-table) {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--table-line);
+    border-radius: var(--table-radius);
+    background: white;
+    box-shadow: none;
+    margin: 12px 0 0;
+}
+#root table.system-table {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    table-layout: auto;
+    font-size: var(--table-font);
+    line-height: 1.45;
+    color: var(--ink);
+    background: white;
+}
+#root .system-table thead { display: table-header-group; }
+#root .system-table tbody { display: table-row-group; }
+#root .system-table tr { display: table-row; height: auto; background: white; }
+#root .system-table :is(th, td) {
+    display: table-cell;
+    padding: var(--table-cell-y) var(--table-cell-x);
+    border: 0;
+    border-bottom: 1px solid var(--table-line);
+    vertical-align: middle;
+    text-align: left;
+    font-size: var(--table-font);
+    line-height: 1.45;
+    letter-spacing: normal;
+    box-shadow: none;
+}
+#root .system-table th {
+    height: 40px;
+    box-sizing: border-box;
+    background: var(--table-header);
+    color: #4c5946;
+    font-size: var(--table-small);
+    font-weight: 600;
+    text-transform: none;
+    white-space: nowrap;
+}
+#root .system-table tbody tr:last-child td { border-bottom: 0; }
+#root .system-table tbody tr:hover { background: var(--table-hover); }
+#root .system-table td small {
+    display: block;
+    color: var(--table-muted);
+    font-size: var(--table-small);
+    line-height: 1.4;
+    margin: 3px 0 0;
+}
+#root .system-table td strong { font-size: inherit; font-weight: 600; }
+#root .system-table .table-number {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+#root .system-table tbody td { background: transparent; }
+#root .system-table tbody tr:hover td { background: var(--table-hover); }
+#root .system-table td[colspan] { padding: 24px 12px; text-align: center; color: var(--table-muted); }
+#root .system-table td:last-child:has(button),
+#root .system-table th.table-actions { text-align: right; }
+#root .system-table :is(button, .sm-btn, .student-button) {
+    min-height: 32px;
+    height: auto;
+    padding: 6px 10px;
+    border-radius: var(--table-radius);
+    font-size: var(--table-small);
+    line-height: 1.4;
+    font-weight: 600;
+    box-shadow: none;
+    margin: 2px;
+    white-space: normal;
+}
+#root .system-table :is(.sm-row-actions, .org-actions, .account-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+#root .system-table input[type=checkbox] { width: 16px; height: 16px; margin: 0; }
+#root :is(.record-status, .org-status-badge, .sm-pill, .sm-badge, .payment-badge) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    box-sizing: border-box;
+    padding: 3px 8px;
+    border: 0;
+    border-radius: 5px;
+    font-size: var(--table-small);
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    box-shadow: none;
+}
+#root .record-status { background: #edf0ec; color: #56614f; }
+#root .record-status[data-tone=positive] { background: #eaf3ea; color: #28623a; }
+#root .record-status[data-tone=negative] { background: #f6eaea; color: #8b4343; }
+#root .record-status[data-tone=pending] { background: #faf2dd; color: #866620; }
+#root :is(.table-toolbar, .org-filter-toolbar, .student-filters, .sm-filters, .admin-analytics-filters) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--table-gap);
+    padding: 12px 0;
+    margin: 0 0 12px;
+    border: 0;
+    border-bottom: 1px solid var(--table-line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+#root :is(.table-toolbar, .org-filter-toolbar, .student-filters, .sm-filters, .admin-analytics-filters) :is(label, .org-field) {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1 1 135px;
+    min-width: 115px;
+    max-width: none;
+    margin: 0;
+    color: var(--table-muted);
+    font-size: var(--table-small);
+    line-height: 1.4;
+    font-weight: 600;
+}
+#root :is(.table-toolbar, .org-filter-toolbar, .student-filters, .sm-filters, .admin-analytics-filters) label:has(input:not([type=date]):not([type=number])) { flex-grow: 2; flex-basis: 200px; }
+#root :is(.table-toolbar, .org-filter-toolbar, .student-filters, .sm-filters, .admin-analytics-filters) :is(input:not([type=checkbox]):not([type=radio]), select) {
+    width: 100%;
+    min-width: 0;
+    min-height: var(--table-control-height);
+    height: var(--table-control-height);
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid #d6dfd2;
+    border-radius: var(--table-radius);
+    background: white;
+    color: var(--ink);
+    font: inherit;
+    font-size: var(--table-font);
+    font-weight: 400;
+    box-shadow: none;
+}
+#root :is(.table-toolbar, .org-filter-toolbar, .student-filters, .sm-filters, .admin-analytics-filters, .sm-filter-actions, .payment-section-heading, .notification-inbox-actions) button {
+    min-height: var(--table-control-height);
+    padding: 8px 12px;
+    border-radius: var(--table-radius);
+    font-size: var(--table-font);
+    line-height: 1.4;
+    font-weight: 600;
+    box-shadow: none;
+}
+#root .sm-search-control { display: block; position: relative; }
+#root .sm-search-control svg { display: none; }
+#root .admin-period-filter { flex: 1 1 170px; margin: 0; padding: 0; border: 0; background: transparent; }
+#root .sm-filter-panel { padding: 16px; box-shadow: none; }
+#root .sm-filter-panel .sm-panel-head { margin: 0; padding: 0 0 10px; background: transparent; border: 0; }
+#root .sm-filter-heading h2 { font-size: 1rem; }
+#root .sm-filter-symbol { display: none; }
+#root :is(.org-pagination, .sm-pagination, .payment-pagination, .table-pagination, .notification-inbox-pagination, .admin-log-footer) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 0 0;
+    margin: 0;
+    border: 0;
+    color: var(--table-muted);
+    font-size: var(--table-small);
+}
+#root :is(.org-pagination, .sm-pagination, .payment-pagination, .table-pagination, .notification-inbox-pagination, .admin-log-pagination) button {
+    min-height: 34px;
+    padding: 6px 12px;
+    border-radius: var(--table-radius);
+    font-size: var(--table-small);
+    box-shadow: none;
+}
+#root :is(.payment-pagination, .table-pagination) > span:first-child { margin-right: auto; }
+#root :is(.org-pagination, .sm-pagination, .table-pagination) > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; }
+#root :is(.org-empty-state, .notification-inbox-empty) { padding: 24px 12px; text-align: center; color: var(--table-muted); font-size: var(--table-font); }
+#root .notification-inbox-filters { display: flex; gap: 8px; padding: 12px 0; }
+#root .notification-inbox-filters button { min-height: 36px; padding: 6px 12px; border-radius: var(--table-radius); font-size: var(--table-small); }
+#root .notification-inbox-row { padding: 12px; border-bottom: 1px solid var(--table-line); box-shadow: none; }
+#root .notification-inbox-title h3 { font-size: var(--table-font); }
+#root .notification-inbox-description { font-size: var(--table-font); }
+#root .notification-inbox-meta { font-size: var(--table-small); color: var(--table-muted); }
+@media (max-width: 700px) {
+    :root { --table-control-height: 44px; }
+    #root .system-table { min-width: 600px; }
+    #root .system-table :is(th, td) { padding: 10px 12px; }
+    #root .system-table button,
+    #root :is(.org-pagination, .sm-pagination, .payment-pagination, .table-pagination, .notification-inbox-pagination, .admin-log-pagination) button { min-height: 44px; }
+    #root :is(.table-toolbar, .org-filter-toolbar, .student-filters, .sm-filters, .admin-analytics-filters) > label { flex-basis: calc(50% - 10px); }
+    #root :is(.table-toolbar, .org-filter-toolbar, .student-filters, .sm-filters, .admin-analytics-filters) label:has(input:not([type=date]):not([type=number])) { flex-basis: 100%; }
+}
+@media print {
+    #root .system-table { min-width: 0; font-size: 10pt; }
+    #root :is(.org-table, .student-table, .sm-table-wrap, .admin-activity-table) { overflow: visible; }
+}

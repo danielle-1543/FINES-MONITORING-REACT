@@ -132,20 +132,20 @@ export default function StudentRecord({ studentId, accessToken, onClose, onUpdat
                 </div>
             </form>}
             <h3>Recorded Fines</h3>
-            {!data.fines.length ? <p>No fines recorded for this student.</p> : <div className="org-table"><table>
-                <thead><tr><th>Violation / Fine</th><th>Event / Date</th><th>Fine</th><th>Outstanding</th></tr></thead>
+            {!data.fines.length ? <p>No fines recorded for this student.</p> : <div className="org-table"><table className="system-table">
+                <thead><tr><th>Violation / Fine</th><th>Event / Date</th><th className="table-number">Fine</th><th className="table-number">Outstanding</th></tr></thead>
                 <tbody>{data.fines.map(fine => <tr key={fine.fine_key}>
                     <td>{fine.violation_name}</td><td>{fine.event_name}<small>{fine.recorded_at}</small></td>
-                    <td>{money(fine.fine_amount)}</td>
-                    <td>{money(fine.outstanding)}</td>
+                    <td className="table-number">{money(fine.fine_amount)}</td>
+                    <td className="table-number">{money(fine.outstanding)}</td>
                 </tr>)}</tbody>
             </table></div>}
             <h3>Voucher / Discount History</h3>
-            {!data.vouchers.length ? <p>No vouchers or discounts yet.</p> : <div className="org-table"><table>
+            {!data.vouchers.length ? <p>No vouchers or discounts yet.</p> : <div className="org-table"><table className="system-table">
                 <thead><tr><th>Date</th><th>Type / Value</th><th>Discount</th><th>Reason</th></tr></thead>
                 <tbody>{data.vouchers.map(voucher => <tr key={voucher.id}>
                     <td>{voucher.created_at}</td><td>{voucher.discount_type === 'PERCENT' ? `${voucher.discount_value}%` : money(voucher.discount_value)}</td>
-                    <td>{money(voucher.amount)}</td><td>{voucher.reason}</td>
+                    <td className="table-number">{money(voucher.amount)}</td><td>{voucher.reason}</td>
                 </tr>)}</tbody>
             </table></div>}
         </>}

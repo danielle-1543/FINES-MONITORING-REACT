@@ -1,3 +1,4 @@
+import RecordStatus from './RecordStatus'
 import AcademicPeriodSelect from './AcademicPeriodSelect'
 import { useEffect, useRef, useState } from 'react'
 import { money, date } from '../utils/format'
@@ -93,7 +94,8 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
         </div>
 
         <section className="student-panel">
-            <div className="payment-section-heading"><h3>Fines by organization</h3>
+            <h3>Fines by organization</h3>
+            <div className="table-toolbar">
                 <label>Status <select value={fineStatus} onChange={event => { setFineStatus(event.target.value); setFinePages({}) }}>
                     <option value="ALL">All fines</option><option value="UNPAID">Unpaid</option><option value="PAID">Paid</option>
                 </select></label>
@@ -105,14 +107,14 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
             {active ? <>
                 <h4>{active.name}</h4>
                 {!active.eligible && <p className="payment-state-note">{paymentBlockReason(active)}</p>}
-                <div className="student-table"><table>
-                    <thead><tr><th>Fine / Event</th><th>Original</th><th>Reductions</th><th>Paid</th><th>Remaining</th><th>Status</th></tr></thead>
+                <div className="student-table"><table className="system-table">
+                    <thead><tr><th>Fine / Event</th><th className="table-number">Original</th><th className="table-number">Reductions</th><th className="table-number">Paid</th><th className="table-number">Remaining</th><th>Status</th></tr></thead>
                     <tbody>{fineResults.rows.map(fine => <tr key={fine.fine_key}>
                         <td>{fine.violation_name || 'Fine'}<small className="payment-window">{fine.event_name}</small></td>
-                        <td>{money(fine.fine_amount)}</td>
-                        <td>{money(Number(fine.cap_adjustment || 0) + Number(fine.discount_amount || 0))}</td>
-                        <td>{money(fine.paid_amount)}</td><td>{money(fine.outstanding)}</td>
-                        <td>{fine.payment_status === 'PAID' ? 'Paid' : 'Unpaid'}{Number(fine.pending_amount) > 0 && <small className="payment-window">{money(fine.pending_amount)} pending</small>}</td>
+                        <td className="table-number">{money(fine.fine_amount)}</td>
+                        <td className="table-number">{money(Number(fine.cap_adjustment || 0) + Number(fine.discount_amount || 0))}</td>
+                        <td className="table-number">{money(fine.paid_amount)}</td><td className="table-number">{money(fine.outstanding)}</td>
+                        <td><RecordStatus value={fine.payment_status} />{Number(fine.pending_amount) > 0 && <small className="payment-window">{money(fine.pending_amount)} pending</small>}</td>
                     </tr>)}</tbody>
                 </table></div>
                 {!fineResults.total && <p>No fines match this filter.</p>}
@@ -123,16 +125,16 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
         <section className="student-panel">
             <h3>Payment schedules</h3>
             <p>Only organizations that cover your current program appear here. Choose an open schedule, then select Pay fines.</p>
-            <div className="student-table"><table>
-                <thead><tr><th>Organization / Semester</th><th>Payment window</th><th>Status</th><th>Payable to organization now</th><th>Action</th></tr></thead>
+            <div className="student-table"><table className="system-table">
+                <thead><tr><th>Organization / Semester</th><th>Payment window</th><th>Status</th><th className="table-number">Payable to organization now</th><th className="table-actions">Action</th></tr></thead>
                 <tbody>{scheduleResults.rows.map(({ group, schedule }) => {
                     const reason = paymentBlockReason(group, schedule)
                     return <tr key={`${group.id}:${schedule?.id || 'none'}`}>
                         <td>{group.name}<small className="payment-window">{schedule?.label || 'Not scheduled'}</small>
                             {schedule?.cap_amount != null && <small className="payment-window">Semester cap: {money(schedule.cap_amount)}</small>}</td>
                         <td>{schedule ? <>{date(schedule.opens_at)}<br />to {date(schedule.closes_at)}</> : 'Not published'}</td>
-                        <td>{schedule ? { OPEN: 'Open', UPCOMING: 'Upcoming', CLOSED: 'Closed' }[schedule.payment_window] : 'Not scheduled'}</td>
-                        <td>{money(group.payable / 100)}</td>
+                        <td><RecordStatus value={schedule?.payment_window || 'Not scheduled'} /></td>
+                        <td className="table-number">{money(group.payable / 100)}</td>
                         <td><button type="button" disabled={busy || Boolean(reason)} onClick={() => openPayment(group.id)}>Pay fines</button>
                             {reason && <small className="payment-window">{reason}</small>}</td>
                     </tr>

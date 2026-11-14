@@ -1,3 +1,4 @@
+import RecordStatus from '../../components/RecordStatus'
 import AcademicPeriodSelect from '../../components/AcademicPeriodSelect'
 import FineArchives from '../../components/FineArchives'
 import { apiRequest } from '../../utils/apiRequest'
@@ -266,17 +267,17 @@ function ViolationTypes({
         </form>
         <h4>Existing Violation Types</h4>
         {!types.length ? <p>No violation types yet.</p> : <div className="org-table">
-            <table>
+            <table className="system-table">
                 <thead>
                     <tr>
                         <th>Violation</th>
-                        <th>Fine (PHP)</th>
+                        <th className="table-number">Fine (PHP)</th>
                     </tr>
                 </thead>
                 <tbody>{types.map(item => {
                     return <tr key={item.id}>
                         <td>{item.name}</td>
-                        <td>{money(item.fine_amount)}</td>
+                        <td className="table-number">{money(item.fine_amount)}</td>
                     </tr>
                 })}</tbody>
             </table>
@@ -318,14 +319,14 @@ function Events({
         <section className="org-panel">
             <h3>Manage Events</h3>
             {!events.length ? <p>No events yet.</p> : <div className="org-table">
-                <table>
+                <table className="system-table">
                     <thead>
                         <tr>
                             <th>Event</th>
                             <th>Type</th>
                             <th>Scan Window</th>
                             <th>Scanning</th>
-                            <th>Actions</th>
+                            <th className="table-actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody>{events.map(event => {
@@ -337,7 +338,7 @@ function Events({
                                 {event.event_type === 'ATTENDANCE' && <small>Absence fine: {money(event.absence_fine_amount)}</small>}
                             </td>
                             <td>{pht(event.scan_starts_at)}<br />to {pht(event.scan_ends_at)}</td>
-                            <td>{windowStatus(event, now)}</td>
+                            <td><RecordStatus value={windowStatus(event, now)} /></td>
                             <td>
                                 <div className="org-actions">
                                     {event.event_type === 'ATTENDANCE' && <button
@@ -409,7 +410,7 @@ function RecordTable({
     showAttendance = true
 }) {
     return !records.length ? <p>No records yet.</p> : <div className="org-table">
-        <table>
+        <table className="system-table">
             <thead>
                 <tr>
                     <th>Course</th>
@@ -420,7 +421,7 @@ function RecordTable({
                     {includeEvent && <th>Event / Semester</th>}
                     {showAttendance && <th>Attendance Status</th>}
                     <th>Recorded Violations</th>
-                    <th>Fine (PHP)</th>
+                    <th className="table-number">Fine (PHP)</th>
                     <th>Recorded At</th>
                 </tr>
             </thead>
@@ -432,13 +433,13 @@ function RecordTable({
                     <td>{record.full_name}</td>
                     <td>{record.student_number}</td>
                     {includeEvent && <td>{record.event_name}<small className="payment-window">{record.academic_period_label}</small></td>}
-                    {showAttendance && <td>{record.attendance_status || '—'}</td>}
+                    {showAttendance && <td><RecordStatus value={record.attendance_status} /></td>}
                     <td>
                         {record.record_type === 'ATTENDANCE'
                             ? record.additional_violations || 'None'
                             : [record.violation_name, record.additional_violations].filter(Boolean).join(', ') || 'None'}
                     </td>
-                    <td>{money(record.total_fine ?? record.fine_amount)}</td>
+                    <td className="table-number">{money(record.total_fine ?? record.fine_amount)}</td>
                     <td>{pht(record.recorded_at)}</td>
                 </tr>
             })}</tbody>
@@ -1096,7 +1097,7 @@ function StudentRecords({ accessToken, scope }) {
         {error && <p role="alert" className="org-feedback error">{error}</p>}
         {!students ? <p role="status">{error ? 'Student records could not be loaded.' : 'Loading student records…'}</p> : <>
             <div className="org-table org-directory-table" role="region" aria-label="Student records" tabIndex={0}>
-                <table>
+                <table className="system-table">
                     <thead><tr>
                         <th scope="col">Student</th>
                         <th scope="col">Year / Section</th>

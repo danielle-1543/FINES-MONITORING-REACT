@@ -1,3 +1,4 @@
+import RecordStatus from '../../components/RecordStatus'
 import { apiRequest } from '../../utils/apiRequest'
 import { money } from '../../utils/format'
 import { useEffect, useState } from 'react'
@@ -10,7 +11,7 @@ function Table({
     return <section className="org-panel">
         <h2>{title}</h2>
         {!rows.length ? <p>{empty}</p> : <div className="org-table">
-            <table>
+            <table className="system-table">
                 <thead>
                     <tr>{columns.map(([key, label]) => {
                         return <th key={key}>{label}</th>
@@ -18,7 +19,7 @@ function Table({
                 </thead>
                 <tbody>{rows.map((row, index) => {
                     return <tr key={row.id || row.fine_key || index}>{columns.map(([key, , format]) => {
-                        return <td key={key}>{format ? format(row[key]) : row[key] || '—'}</td>
+                        return <td key={key}>{format ? format(row[key]) : ['status', 'attendance_status', 'account_status', 'activation_status'].includes(key) ? <RecordStatus value={row[key]} /> : row[key] || '—'}</td>
                     })}</tr>
                 })}</tbody>
             </table>

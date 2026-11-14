@@ -152,13 +152,13 @@ export default function PaymentSchedules({
             </div>
         </form>}
         <div className="student-table">
-            <table>
+            <table className="system-table">
                 <thead>
                     <tr>
                         <th>Semester</th>
                         <th>Payment window</th>
                         <th>Student cap</th>
-                        <th>Action</th>
+                        <th className="table-actions">Action</th>
                     </tr>
                 </thead>
                 <tbody>{periods.map(period => {

@@ -359,14 +359,14 @@ export default function OrganizationManagement({
                 <span>{result?.pagination.total_records ?? 0} matching organizations</span>
             </div>
             {loading ? <p>Loading organizations…</p> : !result?.data.length ? <p>No organizations match your filters.</p> : <div className="sm-table-wrap">
-                <table>
+                <table className="system-table">
                     <thead>
                         <tr>
                             <th>Organization</th>
                             <th>Username</th>
                             <th>Email</th>
                             <th>Student access</th>
-                            <th>Action</th>
+                            <th className="table-actions">Action</th>
                         </tr>
                     </thead>
                     <tbody>{result.data.map(org => {

@@ -7,6 +7,7 @@ import AppErrorBoundary from './components/AppErrorBoundary.jsx'
 import AppErrorNotice from './components/AppErrorNotice.jsx'
 import './theme.css'
 import './css/admin/AdminRefinements.css'
+import './css/RecordTables.css'
 
 import './config/posthog.js'
 

@@ -1,3 +1,4 @@
+import RecordStatus from '../../components/RecordStatus'
 import AcademicPeriodSelect from '../../components/AcademicPeriodSelect'
 import { apiFetch } from '../../utils/apiFetch'
 import { confirmSensitive } from '../../utils/confirmation'
@@ -126,14 +127,8 @@ async function req(url, token, method = 'GET', body = null) {
     }
     return data
 }
-function Badge({
-    value
-}) {
-    const status = value || 'UNKNOWN'
-    const color = ['ACTIVE', 'ACTIVATED'].includes(status) ? 'active' : ['INACTIVE', 'REVOKED'].includes(status) ? 'inactive' : 'pending'
-    return <span className={`sm-badge ${color}`}>
-        {status}
-    </span>
+function Badge({ value }) {
+    return <RecordStatus value={value} />
 }
 export default function StudentManagement({
     accessToken
@@ -806,7 +801,7 @@ export default function StudentManagement({
                 <p><strong>{updateReasons[updateReason]}</strong></p>
                 {updateNote && <p className="sm-update-note">Note: {updateNote}</p>}
                 {updateReason === 'DEACTIVATE' && <p role="alert" className="sm-alert error">Confirming revokes login access and current sessions for all students below. Their records remain saved.</p>}
-                <div className="sm-table-wrap sm-update-preview"><table><thead><tr><th>Student</th><th>Proposed change</th></tr></thead><tbody>
+                <div className="sm-table-wrap sm-update-preview"><table className="system-table"><thead><tr><th>Student</th><th>Proposed change</th></tr></thead><tbody>
                     {updateReview.students.map(student => <tr key={student.id}><td>{student.before.full_name}<br />{student.before.student_number}</td>
                         <td>{changesLabel(student.before, student.after)}</td></tr>)}
                 </tbody></table></div>
@@ -1166,7 +1161,7 @@ export default function StudentManagement({
                 </>}
             </div>
             <div className="sm-table-wrap">
-                <table>
+                <table className="system-table">
                     <thead>
                         <tr>
                             {multipleEdits && <th>Select</th>}

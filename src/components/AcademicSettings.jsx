@@ -1,3 +1,4 @@
+import RecordStatus from './RecordStatus'
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../utils/apiRequest'
 import { trackEvent } from '../config/posthog'
@@ -65,8 +66,8 @@ export default function AcademicSettings({ accessToken }) {
             <button disabled={busy}>Create academic period</button>
         </form>
         <p>{semesterChangeNote}</p>
-        <div className="student-table"><table><thead><tr><th>Academic period</th><th>Status</th><th>Current</th><th>Actions</th></tr></thead>
-            <tbody>{periods.map(period => <tr key={period.id}><td>{period.label}</td><td>{period.status}</td><td>{Number(period.is_current) ? 'Current' : '—'}</td>
+        <div className="student-table"><table className="system-table"><thead><tr><th>Academic period</th><th>Status</th><th>Current</th><th className="table-actions">Actions</th></tr></thead>
+            <tbody>{periods.map(period => <tr key={period.id}><td>{period.label}</td><td><RecordStatus value={period.status} /></td><td>{Number(period.is_current) ? 'Current' : '—'}</td>
                 <td><button disabled={busy || Boolean(Number(period.is_current))} onClick={() => save({ ...period, is_current: true, status: 'OPEN' })}>Set current</button>{' '}
                     <button disabled={busy || Boolean(Number(period.is_current))} title={Number(period.is_current) ? 'Switch to another semester to close the current one.' : undefined} onClick={() => save({ ...period, is_current: false, status: period.status === 'OPEN' ? 'CLOSED' : 'OPEN' })}>{period.status === 'OPEN' ? 'Close semester' : 'Reopen semester'}</button></td></tr>)}</tbody></table></div>
         <section className="academic-history-section">

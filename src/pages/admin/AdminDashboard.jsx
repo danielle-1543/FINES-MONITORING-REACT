@@ -115,7 +115,7 @@ function SystemActivityAnalytics({ accessToken }) {
                         </div>
                     </div>
                     <div className="admin-analytics-axis"><span>{current.from_date}</span><span>{current.to_date}</span></div>
-                    <details><summary>View daily counts</summary><div className="admin-activity-table"><table>
+                    <details><summary>View daily counts</summary><div className="admin-activity-table"><table className="system-table">
                         <thead><tr><th>Date</th><th>Tracked events</th></tr></thead>
                         <tbody>{current.daily.map(item => <tr key={item.date}><td>{item.date}</td><td>{item.count.toLocaleString()}</td></tr>)}</tbody>
                     </table></div></details>
@@ -216,7 +216,7 @@ function Overview({
                     <span className="admin-update-tag">Updates every 30s</span>
                 </div>
                 {!data.activity.length ? <p>No activities recorded yet. New actions will appear here.</p> : <div className="admin-activity-table">
-                    <table>
+                    <table className="system-table">
                         <thead>
                             <tr>
                                 <th>Date & Time</th>
@@ -245,7 +245,7 @@ function Overview({
                         })}</tbody>
                     </table>
                 </div>}
-                <div className="admin-dashboard-heading">
+                <div className="admin-dashboard-heading table-pagination">
                     <p>{data.pagination.total_records} activities · Page {data.pagination.current_page} of {data.pagination.total_pages}</p>
                     <div className="admin-log-pagination">
                         <button
