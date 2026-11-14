@@ -99,6 +99,30 @@
     margin: 0;
 }
 
+/* Keep attendance list and scanner-record filters in a single responsive grid. */
+.org-record-filters, .org-actions.org-event-record-filters {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;
+    align-items: end; margin: 20px 0; padding: 16px; background: #f5f7f3; border-radius: 8px;
+}
+.org-record-filters > label, .org-event-record-filters .org-field {
+    display: grid; gap: 8px; width: 100%; min-width: 0; margin: 0; font-size: 13px; font-weight: 500;
+}
+.org-record-filters > label:first-child, .org-record-filters .org-filter-event,
+.org-record-filters .org-filter-search, .org-event-record-filters .org-filter-search { grid-column: span 2; }
+.org-record-filters :is(input, select), .org-event-record-filters :is(input, select) { width: 100%; min-width: 0; min-height: 44px; height: 44px; box-sizing: border-box; font-weight: 400; }
+.org-record-filter-actions { display: flex; flex-wrap: wrap; gap: 12px; grid-column: span 2; align-items: center; }
+.org-record-filter-actions > button { flex: 1 1 140px; min-height: 44px; }
+.org-event-record-filters > button { grid-column: span 2; min-height: 44px; justify-self: start; }
+@media (max-width: 1000px) {
+    .org-record-filters, .org-actions.org-event-record-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .org-record-filters > label:first-child, .org-record-filters .org-filter-event { grid-column: span 1; }
+}
+@media (max-width: 600px) {
+    .org-record-filters, .org-actions.org-event-record-filters { grid-template-columns: minmax(0, 1fr); padding: 12px; gap: 12px; }
+    .org-record-filters > label, .org-event-record-filters .org-field, .org-record-filter-actions, .org-event-record-filters > button { grid-column: 1 / -1; }
+    .org-record-filters :is(input, select), .org-event-record-filters :is(input, select) { font-size: 16px; }
+}
+
 .org-table {
     width: 100%;
     overflow-x: auto;

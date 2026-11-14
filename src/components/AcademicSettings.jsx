@@ -3,6 +3,7 @@ import { apiRequest } from '../utils/apiRequest'
 import { trackEvent } from '../config/posthog'
 import { askConfirmation } from '../utils/confirmation'
 import { date } from '../utils/format'
+import { downloadExcel } from '../utils/exportExcel'
 
 const semesterChangeNote = 'Note: All non-graduated students move to the selected academic year and semester. Year levels follow that academic year in either direction: saved year levels are restored when available; otherwise the current year level is adjusted by the academic-year difference, within 1st–4th Year. Switching semesters within the same academic year does not change year levels. Graduated students remain archived. Make course, section or individual year-level corrections in Student Management using Edit Profile or Multiple edits. Accounts and QR codes stay unchanged.'
 
@@ -11,6 +12,7 @@ export default function AcademicSettings({ accessToken }) {
     const [form, setForm] = useState({ year_start: new Date().getFullYear(), term: 'FIRST', is_current: true })
     const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
     const [history, setHistory] = useState([])
+    const [exporting, setExporting] = useState(null)
     useEffect(() => {
         const controller = new AbortController()
         Promise.all([apiRequest('/api/academic-periods', accessToken, undefined, controller.signal), apiRequest('/api/admin/academic-periods/history', accessToken, undefined, controller.signal)]).then(([periods, history]) => { if (!controller.signal.aborted) { setPeriods(periods.data); setHistory(history.data) } })
@@ -41,6 +43,14 @@ export default function AcademicSettings({ accessToken }) {
             trackEvent('academic_period_updated')
         } catch (error) { setError(error.message) } finally { setBusy(false) }
     }
+    async function exportSemester(entry) {
+        setExporting(entry.id); setError(''); setMessage('')
+        try {
+            const result = await apiRequest(`/api/admin/academic-periods/history/export?id=${entry.id}`, accessToken)
+            downloadExcel(result.data, `semester-records-${entry.snapshot.from.year_start}-${entry.snapshot.from.term}-${entry.id}.xlsx`)
+            if (!result.data.graduate_inclusion_recorded) setMessage('Exported the original saved records. This older snapshot did not capture graduates; their inclusion cannot be verified retrospectively.')
+        } catch (reason) { setError(reason.message) } finally { setExporting(null) }
+    }
     return <section className="student-panel payment-page academic-settings">
         <h2>Academic Settings</h2>
         <p>Choose the academic year and semester used for new records. Calendar dates are not required. Changing the current semester requires confirmation, saves the previous student data and updates all students to the new semester. Old fines, attendance and payments keep their original semester.</p>
@@ -61,17 +71,16 @@ export default function AcademicSettings({ accessToken }) {
                     <button disabled={busy || Boolean(Number(period.is_current))} title={Number(period.is_current) ? 'Switch to another semester to close the current one.' : undefined} onClick={() => save({ ...period, is_current: false, status: period.status === 'OPEN' ? 'CLOSED' : 'OPEN' })}>{period.status === 'OPEN' ? 'Close semester' : 'Reopen semester'}</button></td></tr>)}</tbody></table></div>
         <section className="academic-history-section">
             <h3>Previous semester records</h3>
-            <p>Before each semester change, student data is saved here. Original attendance, violations, fines and payments remain under the semester in which they occurred.</p>
+            <p>Before each semester change, student data is saved here, including graduates in their final semester. Export the saved record to view student details and graduation status. Later profile changes do not rewrite this export.</p>
             {!history.some(entry => entry.snapshot.from) && <p>No previous semester change has been recorded yet.</p>}
             {history.filter(entry => entry.snapshot.from).map(entry => <details key={entry.id} className="academic-semester-snapshot">
                 <summary>{entry.snapshot.from.label} → {entry.snapshot.to.label} · {date(entry.changed_at)}</summary>
-                <p>{entry.snapshot.students.length} student records saved before the change.</p>
+                <p>{(entry.snapshot.semester_students || entry.snapshot.students.filter(student => Number(student.current_academic_period_id) === Number(entry.snapshot.from.id))).length} student records saved before the change.</p>
                 {entry.snapshot.academic_year_changed ? <p>{entry.snapshot.year_levels_updated} year level(s) updated; {entry.snapshot.year_levels_restored} restored from saved records.</p>
                     : entry.snapshot.advancing_academic_year && <p>{entry.snapshot.year_levels_promoted} student(s) advanced one year level.</p>}
                 <p>Preserved records: {entry.snapshot.records.org_events} events · {entry.snapshot.records.org_scan_records} scan records · {entry.snapshot.records.org_violation_records} violation records · {entry.snapshot.records.payment_claims} payment claims.</p>
-                <div className="student-table"><table><thead><tr><th>Student number</th><th>Name</th><th>Course</th><th>Year level</th><th>Section</th></tr></thead>
-                    <tbody>{entry.snapshot.students.map(student => <tr key={student.id}><td>{student.student_number}</td><td>{student.full_name}</td><td>{student.course}</td><td>{student.year_level}</td><td>{student.section}</td></tr>)}</tbody>
-                </table></div>
+                {!entry.snapshot.semester_students && <p>This older snapshot contains only the student records saved at that time. Graduate inclusion was not recorded.</p>}
+                <button type="button" disabled={exporting !== null || busy} onClick={() => exportSemester(entry)}>{exporting === entry.id ? 'Exporting…' : 'Export Semester Records'}</button>
             </details>)}
         </section>
     </section>

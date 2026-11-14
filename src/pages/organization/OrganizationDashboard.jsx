@@ -704,13 +704,9 @@ function EventScanner({
             />
         </div>
         <p>Export includes all matching records in the selected order.</p>
-        <RecordSorting filters={recordFilters} onChange={changes => {
-            setRecordFilters(current => ({ ...current, ...changes }))
-            setPage(1)
-            setLoading(true)
-        }} />
-        <div className="org-actions">
-            {['student_number', 'section', 'year_level'].map(field => <label className="org-field" key={field}>
+
+        <div className="org-actions org-event-record-filters" role="group" aria-label="Search and filter recorded attendance">
+            {['student_number', 'section', 'year_level'].map(field => <label className={`org-field ${field === 'student_number' ? 'org-filter-search' : ''}`} key={field}>
                 {field === 'student_number' ? 'Student ID' : field === 'section' ? 'Section' : 'Year Level'}
                 {field === 'year_level' ? <select value={recordFilters[field]} onChange={e => {
                     setRecordFilters(current => ({ ...current, [field]: e.target.value }))
@@ -748,6 +744,11 @@ function EventScanner({
                     {[...new Set(types.map(type => type.name))].map(name => <option key={name}>{name}</option>)}
                 </select>
             </label>}
+        <RecordSorting filters={recordFilters} onChange={changes => {
+            setRecordFilters(current => ({ ...current, ...changes }))
+            setPage(1)
+            setLoading(true)
+        }} />
             <button type="button" className="secondary" onClick={() => {
                 setRecordFilters({ student_number: '', section: '', year_level: '', attendance_status: '' })
                 setPage(1)
@@ -907,66 +908,32 @@ function Records({
     }, [query, page, accessToken])
     return <section className="org-panel">
         <h2>{kind === 'ATTENDANCE' ? 'Attendance' : 'Violations'}</h2>
-        <AcademicPeriodSelect accessToken={accessToken} value={filters.academic_period_id || 'all'} onChange={value => {
-            setFilters(current => ({ ...current, academic_period_id: value })); setPage(1); setLoading(true); setError('')
-        }} includeAll includeLegacy />
-        <div className="org-actions">
-            {['search', 'section', 'year_level', 'attendance_status'].map(field => <label className="org-field" key={field}>
-                {{ search: 'Search student', section: 'Section', year_level: 'Year Level', attendance_status: 'Attendance Status' }[field]}
-                {['search', 'section'].includes(field) ? <input value={filters[field]}
-                    placeholder={field === 'search' ? 'Student number or name' : 'e.g. F1'} maxLength={100}
-                    onChange={e => {
-                        setFilters(current => ({ ...current, [field]: e.target.value }))
-                        setPage(1)
-                        setLoading(true)
-                    }} /> : <select value={filters[field]} onChange={e => {
-                    setFilters(current => ({ ...current, [field]: e.target.value }))
-                    setPage(1)
-                    setLoading(true)
-                }}>
-                    <option value="">All</option>
-                    {(field === 'year_level' ? ['1st Year', '2nd Year', '3rd Year', '4th Year'] : ['PRESENT', 'ABSENT']).map(value => <option key={value}>{value}</option>)}
-                </select>}
+        <div className="org-record-filters" role="group" aria-label="Search and filter records">
+            <AcademicPeriodSelect accessToken={accessToken} value={filters.academic_period_id || 'all'} onChange={value => {
+                setFilters(current => ({ ...current, academic_period_id: value })); setPage(1); setLoading(true); setError('')
+            }} includeAll includeLegacy />
+            <label className="org-field org-filter-event">Event<select value={eventId} onChange={event => {
+                setEventId(event.target.value); setPage(1); setError(''); setLoading(true); setRecords([])
+            }}>
+                <option value="">All events</option>
+                {events.filter(event => event.event_type === kind).map(event => <option key={event.id} value={event.id}>{event.name}</option>)}
+            </select></label>
+            {['search', 'section', 'year_level', 'attendance_status'].map(field => <label className={`org-field ${field === 'search' ? 'org-filter-search' : ''}`} key={field}>
+                {{ search: 'Search student', section: 'Section', year_level: 'Year level', attendance_status: 'Attendance status' }[field]}
+                {['search', 'section'].includes(field) ? <input value={filters[field]} placeholder={field === 'search' ? 'Student number or name' : 'e.g. F1'} maxLength={100}
+                    onChange={event => { setFilters(current => ({ ...current, [field]: event.target.value })); setPage(1); setLoading(true); setError('') }} />
+                    : <select value={filters[field]} onChange={event => { setFilters(current => ({ ...current, [field]: event.target.value })); setPage(1); setLoading(true); setError('') }}>
+                        <option value="">{field === 'year_level' ? 'All year levels' : 'All statuses'}</option>
+                        {(field === 'year_level' ? ['1st Year', '2nd Year', '3rd Year', '4th Year'] : ['PRESENT', 'ABSENT']).map(value => <option key={value}>{value}</option>)}
+                    </select>}
             </label>)}
-            <button type="button" className="secondary" onClick={() => {
-                setFilters({ search: '', section: '', year_level: '', attendance_status: '' })
-                setPage(1)
-            }}>Clear Filters</button>
+            <RecordSorting filters={filters} onChange={changes => { setFilters(current => ({ ...current, ...changes })); setPage(1); setLoading(true); setError('') }} />
+            <div className="org-record-filter-actions">
+                <button type="button" className="secondary" onClick={() => { setFilters({ search: '', section: '', year_level: '', attendance_status: '' }); setEventId(''); setPage(1); setLoading(true); setError('') }}>Clear filters</button>
+                <DownloadExcel path={`records/export?${query}`} accessToken={accessToken} filename={kind === 'ATTENDANCE' ? 'attendance-records.xlsx' : 'violation-records.xlsx'} />
+            </div>
         </div>
-        <RecordSorting filters={filters} onChange={changes => {
-            setFilters(current => ({ ...current, ...changes }))
-            setPage(1)
-            setLoading(true)
-        }} />
-        <label className="org-field">Event<select
-            value={eventId}
-            onChange={e => {
-                setEventId(e.target.value)
-                setPage(1)
-                setError('')
-                setLoading(true)
-                setRecords([])
-            }}
-        >
-            <option value="">All events</option>
-            {events.filter(event => {
-                return event.event_type === kind
-            }).map(event => {
-                return <option
-                    key={event.id}
-                    value={event.id}
-                >{event.name}</option>
-            })}
-        </select></label>
-        {error && <p
-            role="alert"
-            className="org-feedback error"
-        >{error}</p>}
-        <DownloadExcel
-            path={`records/export?${query}`}
-            accessToken={accessToken}
-            filename="attendance-records.xlsx"
-        />
+        {error && <p role="alert" className="org-feedback error">{error}</p>}
         {loading ? <p>Loading records…</p> : <><RecordTable
             records={records}
             includeEvent
