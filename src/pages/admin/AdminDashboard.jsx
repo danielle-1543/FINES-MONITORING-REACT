@@ -1,5 +1,4 @@
 import AcademicSettings from '../../components/AcademicSettings'
-import FineArchives from '../../components/FineArchives'
 import { apiFetch } from '../../utils/apiFetch'
 import StatisticsChart from '../../components/StatisticsChart'
 import AccountSettings from '../../components/AccountSettings'
@@ -279,14 +278,13 @@ export default function AdminDashboard({
         className="admin-portal"
         role="Admin"
         account={user?.username || 'Admin'}
-        items={[['dashboard', 'Dashboard'], ['students', 'Student Management'], ['organizations', 'Organizations'], ['academic', 'Academic Settings'], ['archives', 'Fine Archives'], ['profile', 'Account Settings']]}
+        items={[['dashboard', 'Dashboard'], ['students', 'Student Management'], ['organizations', 'Organizations'], ['academic', 'Academic Settings'], ['profile', 'Account Settings']]}
         page={activePage}
         pageDescription={{
-            dashboard: 'Student accounts, system activity and semester fine summaries.',
+            dashboard: 'Student accounts and system activity.',
             students: 'Register students and update their semester, profile and account records.',
             organizations: 'Manage organization accounts and program access.',
             academic: 'Configure academic periods and review legacy record classifications.',
-            archives: 'Review fine assessments and payment allocations by semester.',
             profile: 'Manage your administrator account and sign-in details.'
         }[activePage]}
 onNavigate={setActivePage}
@@ -297,8 +295,6 @@ onNavigate={setActivePage}
             username={user?.username}
         />}
         {activePage === 'academic' && <AcademicSettings accessToken={accessToken} />}
-        {activePage === 'archives' && <FineArchives accessToken={accessToken} role="ADMIN" />}
-        {activePage === 'dashboard' && <FineArchives accessToken={accessToken} role="ADMIN" summaryOnly />}
         {activePage === 'students' && <StudentManagement accessToken={accessToken} />}
         {activePage === 'organizations' && <OrganizationManagement accessToken={accessToken} />}
         {activePage === 'profile' && <AccountSettings

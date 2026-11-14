@@ -127,6 +127,18 @@ export default function StudentAccount({
                 className="account-error"
             >{error}</p> : !data ? <p>Loading your dashboard…</p> : <>
                 <h2 className="portal-greeting">Mabuhay, {data.profile.full_name}!</h2>
+                <section className="student-current-statistics" aria-labelledby="student-statistics-title">
+                    <h3 id="student-statistics-title">Current semester statistics</h3>
+                    {data.current_period ? <>
+                        <p>AY {data.current_period.label} · Current</p>
+                        <div className="student-summary student-current-statistics-grid">
+                            <article><span>Total Violations</span><strong>{data.summary.total_violations}</strong></article>
+                            <article><span>Total Fines</span><strong>{money(data.summary.total_fines)}</strong><small>Original assessments before caps and discounts</small></article>
+                            <article><span>Confirmed Payments</span><strong>{money(data.summary.paid_amount)}</strong><small>Verified payments applied to this semester’s fines</small></article>
+                            <article><span>Outstanding Fines</span><strong>{money(data.summary.unpaid_fines)}</strong><small>After caps, discounts and verified payments</small></article>
+                        </div>
+                    </> : <p>No open current academic semester is configured. Please contact the administrator.</p>}
+                </section>
                 <Records
                     title="Recent Attendance"
                     rows={data.recent_attendance}
