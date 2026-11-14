@@ -12,6 +12,7 @@ const years = ['1st Year', '2nd Year', '3rd Year', '4th Year']
 const updateReasons = {
     PROMOTION: 'Year-level update / Promotion',
     RETAINED: 'Retained year level',
+    GRADUATED: 'Mark as Graduated / Archive',
     SECTION_CHANGE: 'Change section',
     SEMESTER_CHANGE: 'Change academic year / semester',
     SHIFT_COURSE: 'Shift course',
@@ -780,9 +781,13 @@ export default function StudentManagement({
                     {fieldLabels[field]}
                     {field === 'course' || field === 'year_level' ? <select
                         value={updateChanges[field] ?? updateTarget.existing?.[field] ?? ''} required={field === 'course'} disabled={updateBusy}
-                        onChange={event => setUpdateChanges(current => ({ ...current, [field]: event.target.value }))}>
+                        onChange={event => {
+                            if (field === 'year_level' && event.target.value === 'Graduated') { setUpdateReason('GRADUATED'); setUpdateChanges({}) }
+                            else setUpdateChanges(current => ({ ...current, [field]: event.target.value }))
+                        }}>
                         <option value="">{field === 'course' ? 'Choose destination course' : 'Choose year level'}</option>
                         {(field === 'course' ? Array.from(new Set([...courses, ...opts.courses])) : years).map(value => <option key={value}>{value}</option>)}
+                        {field === 'year_level' && <option value="Graduated">Graduated — use Mark as Graduated</option>}
                     </select> : <input value={updateChanges[field] ?? updateTarget.existing?.[field] ?? ''} placeholder={updateTarget.count > 1 ? "Leave blank to preserve each student’s value" : field === "section" ? "F1" : "Enter value"}
                         maxLength={field === 'section' ? 50 : field === 'full_name' ? 150 : 30} disabled={updateBusy}
                         onChange={event => setUpdateChanges(current => ({ ...current, [field]: event.target.value }))} />}
@@ -790,6 +795,7 @@ export default function StudentManagement({
                 {['TRANSFERRED_OUT', 'DROPPED_OUT'].includes(updateReason) && <p className="sm-alert">Records this departure reason and enables the separate Deactivate account action. It does not deactivate the account automatically.</p>}
                 {updateReason === 'DEACTIVATE' && <p className="sm-alert error">Students will lose login access and existing sessions will be revoked. Records and QR identities are kept. Every selected student must already have a recorded transfer-out or dropout reason.</p>}
                 {updateReason === 'REACTIVATE' && <p className="sm-alert">Restores account access, clears the departure reason, and requires a fresh login.</p>}
+                {updateReason === 'GRADUATED' && <p className="sm-alert">Only selected fourth-year students will be marked Graduated. They will be hidden from current student lists and excluded from future semester rollovers and attendance rosters. Previous records, accounts, QR identities and unpaid balances are preserved.</p>}
                 <label>Additional note (optional)
                     <textarea rows="3" maxLength="1000" value={updateNote} disabled={updateBusy}
                         onChange={event => setUpdateNote(event.target.value)} />
@@ -1079,7 +1085,7 @@ export default function StudentManagement({
                     </span>
                 </label>
 
-                {[['section', 'Section', null], ['year_level', 'Year level', opts.year_levels], ['course', 'Course', courses], ['activation_status', 'Account status', ['PENDING', 'ACTIVATED']], ['account_status', 'Account access', ['ACTIVE', 'INACTIVE']]].map(([key, label, values]) => {
+                {[['section', 'Section', null], ['year_level', 'Year level', [...years, 'Graduated']], ['course', 'Course', courses], ['activation_status', 'Account status', ['PENDING', 'ACTIVATED']], ['account_status', 'Account access', ['ACTIVE', 'INACTIVE']]].map(([key, label, values]) => {
                     return <label key={key}>
                         {label}
                         {key === 'section' ? <input
@@ -1095,7 +1101,7 @@ export default function StudentManagement({
                                 return filter(key, event.target.value)
                             }}
                         >
-                            <option value="">All {label}</option>
+                            <option value="">{key === 'year_level' ? 'All current year levels' : `All ${label}`}</option>
 
                             {(values || []).map(value => {
                                 return <option

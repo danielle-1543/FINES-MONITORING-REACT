@@ -4,7 +4,7 @@ import { trackEvent } from '../config/posthog'
 import { askConfirmation } from '../utils/confirmation'
 import { date } from '../utils/format'
 
-const semesterChangeNote = 'Note: Only the academic year and semester are updated automatically for all students. Make other specific changes, such as year level, course or section, in Student Management using Edit Profile or Multiple edits. Accounts and QR codes stay unchanged.'
+const semesterChangeNote = 'Note: All non-graduated students move to the selected academic year and semester. Graduated students remain archived in their last semester. When the academic year advances, year levels advance once: 1st → 2nd → 3rd → 4th Year. Fourth-year students stay at 4th Year until the administrator manually marks them Graduated. Changing semesters within the same academic year does not promote students. Make course, section or individual year-level corrections in Student Management using Edit Profile or Multiple edits. Accounts and QR codes stay unchanged.'
 
 export default function AcademicSettings({ accessToken }) {
     const [periods, setPeriods] = useState([])
@@ -25,8 +25,11 @@ export default function AcademicSettings({ accessToken }) {
             let payload = values
             if (switching) {
                 const preview = (await apiRequest('/api/admin/academic-periods/save', accessToken, { ...values, preview: true })).data
+                const promotionMessage = preview.advancing_academic_year
+                    ? ` The academic year is advancing: ${preview.year_levels_promoted} student(s) will advance one year level. ${preview.fourth_year_unchanged} fourth-year student(s) will remain at 4th Year. ${preview.year_level_review} student(s) have unrecognized year levels and need manual review.`
+                    : ' Year levels will stay unchanged because the academic year is not advancing.'
                 const confirmed = await askConfirmation({ title: 'Change academic year and semester?', confirmLabel: 'Apply to all students',
-                    message: `Are you sure you want to change from ${preview.from || 'no current academic period'} to ${preview.to}? This will automatically update all ${preview.students} student record(s) to the selected academic year and semester. Student data from before the change will be saved, and the previous semester will close. Existing fines, attendance and payments will remain in their original semester.`,
+                    message: `Are you sure you want to change from ${preview.from || 'no current academic period'} to ${preview.to}? This will automatically update ${preview.students} non-graduated student record(s) to the selected academic year and semester. ${preview.graduates_excluded || 0} graduated student(s) will remain archived.${promotionMessage} Student data from before the change will be saved, and the previous semester will close. Existing fines, attendance and payments will remain in their original semester.`,
                     note: semesterChangeNote })
                 if (!confirmed) return
                 payload = { ...values, preview: false, fingerprint: preview.fingerprint }
@@ -34,7 +37,7 @@ export default function AcademicSettings({ accessToken }) {
             const result = await apiRequest('/api/admin/academic-periods/save', accessToken, payload)
             setHistory((await apiRequest('/api/admin/academic-periods/history', accessToken)).data)
             setPeriods((await apiRequest('/api/academic-periods', accessToken)).data)
-            setMessage(switching ? `Academic year and semester changed. ${result.data.students_updated} student record(s) updated automatically. Previous records and student snapshots are saved below.` : 'Academic settings saved.')
+            setMessage(switching ? `Academic year and semester changed. ${result.data.students_updated} student record(s) updated; ${result.data.year_levels_promoted} promoted to the next year level. Previous records and student snapshots are saved below.` : 'Academic settings saved.')
             trackEvent('academic_period_updated')
         } catch (error) { setError(error.message) } finally { setBusy(false) }
     }
@@ -63,6 +66,7 @@ export default function AcademicSettings({ accessToken }) {
             {history.filter(entry => entry.snapshot.from).map(entry => <details key={entry.id} className="academic-semester-snapshot">
                 <summary>{entry.snapshot.from.label} → {entry.snapshot.to.label} · {date(entry.changed_at)}</summary>
                 <p>{entry.snapshot.students.length} student records saved before the change.</p>
+                {entry.snapshot.advancing_academic_year && <p>{entry.snapshot.year_levels_promoted} student(s) advanced one year level.</p>}
                 <p>Preserved records: {entry.snapshot.records.org_events} events · {entry.snapshot.records.org_scan_records} scan records · {entry.snapshot.records.org_violation_records} violation records · {entry.snapshot.records.payment_claims} payment claims.</p>
                 <div className="student-table"><table><thead><tr><th>Student number</th><th>Name</th><th>Course</th><th>Year level</th><th>Section</th></tr></thead>
                     <tbody>{entry.snapshot.students.map(student => <tr key={student.id}><td>{student.student_number}</td><td>{student.full_name}</td><td>{student.course}</td><td>{student.year_level}</td><td>{student.section}</td></tr>)}</tbody>
