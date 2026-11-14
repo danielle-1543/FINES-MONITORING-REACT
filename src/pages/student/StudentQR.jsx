@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
+import { qrDownloadImage } from '../../utils/qrDownload'
 import { studentRequest } from './studentApi'
 export default function StudentQR({
     accessToken
 }) {
     const [data, setData] = useState(null),
         [image, setImage] = useState(''),
+        [downloadImage, setDownloadImage] = useState(''),
         [error, setError] = useState('')
     useEffect(() => {
         const controller = new AbortController()
@@ -16,9 +18,11 @@ export default function StudentQR({
                 margin: 3,
                 errorCorrectionLevel: 'M'
             }) : ''
+            const download = png ? await qrDownloadImage(png, value.profile) : ''
             if (!controller.signal.aborted) {
                 setData(value)
                 setImage(png)
+                setDownloadImage(download)
                 setError('')
             }
         }).catch(err => {
@@ -46,7 +50,7 @@ export default function StudentQR({
                 <p>Display this QR to the organization scanner. It is your assigned code; downloading it does not change it.</p>
                 <a
                     className="student-button"
-                    href={image}
+                    href={downloadImage}
                     download={`QR-${data.profile.student_number}.png`}
                 >Download QR (PNG)</a></> : <p role="alert">Your QR code is {data.qr_token_status === 'REVOKED' ? 'revoked' : 'unavailable'}. Contact the administrator for assistance.</p>}
         </>}

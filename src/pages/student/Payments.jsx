@@ -168,7 +168,8 @@ export default function Payments({
                 url = URL.createObjectURL(blob),
                 link = document.createElement('a')
             link.href = url
-            link.download = `payment-proof-${id}.${blob.type === 'application/pdf' ? 'pdf' : blob.type === 'image/png' ? 'png' : 'jpg'}`
+            const period = (data.claims.find(claim => Number(claim.id) === Number(id))?.academic_period_label || 'Not assigned').replace(/[^a-z0-9]+/gi, '-')
+            link.download = `payment-proof-${id}-${period}.${blob.type === 'application/pdf' ? 'pdf' : blob.type === 'image/png' ? 'png' : 'jpg'}`
             link.click()
             setTimeout(() => {
                 return URL.revokeObjectURL(url)

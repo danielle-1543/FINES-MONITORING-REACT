@@ -4,6 +4,7 @@ import { confirmSensitive } from '../../utils/confirmation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import QRCode from 'qrcode'
+import { qrDownloadImage } from '../../utils/qrDownload'
 import { jsPDF } from 'jspdf'
 import '../../css/admin/StudentManagement.css'
 const API = '/api/admin/students'
@@ -398,6 +399,19 @@ export default function StudentManagement({
             setFormOpen(false)
         }
     }
+    async function downloadImportTemplate() {
+        setError('')
+        try {
+            const result = await req('/api/academic-periods', accessToken)
+            const current = result.data.find(period => Number(period.is_current) === 1 && period.status === 'OPEN')
+            if (!current) throw new Error('Configure an open current academic period before downloading the import template.')
+            const sheet = XLSX.utils.aoa_to_sheet([['academic_year_and_semester', 'student_number', 'full_name', 'section', 'course', 'year_level'], [current.label, '', '', '', '', '']])
+            sheet['!cols'] = [{ wch: 38 }, { wch: 20 }, { wch: 32 }, { wch: 12 }, { wch: 14 }, { wch: 16 }]
+            const workbook = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(workbook, sheet, 'Students')
+            XLSX.writeFile(workbook, 'student_import_template.xlsx')
+        } catch (reason) { setError(reason.message) }
+    }
     async function importFile(event) {
         const file = event.target.files?.[0]
         event.target.value = ''
@@ -451,13 +465,15 @@ export default function StudentManagement({
                     normalized[key.trim().toLowerCase()] = String(value ?? '').trim()
                 })
                 return {
+                    academic_period_label: normalized.academic_year_and_semester || '',
                     student_number: normalized.student_number || '',
                     full_name: normalized.full_name || '',
                     section: normalized.section || '',
                     course: normalized.course || '',
                     year_level: normalized.year_level || ''
                 }
-            })
+            }).filter(row => Object.keys(blank).some(key => row[key]))
+            if (!dataRows.length) throw new Error('The file contains no student records. Fill in the template before importing.')
             const result = await action('bulk-import', {
                 rows: dataRows, academic_period_id: importPeriod
             })
@@ -477,7 +493,7 @@ export default function StudentManagement({
             const current = details.data
             const [qrResult, codeResult] = await Promise.allSettled([
                 current.qr_token_status === 'ACTIVE' ? req(`${API}/qr-details`, accessToken, 'POST', { id: student.id })
-                    .then(result => QRCode.toDataURL(result.data.qr_token, { width: 300, margin: 2 })) : Promise.resolve(''),
+                    .then(async result => qrDownloadImage(await QRCode.toDataURL(result.data.qr_token, { width: 400, margin: 3 }), current)) : Promise.resolve(''),
                 current.activation_status === 'PENDING' ? req(`${API}/reveal-code`, accessToken, 'POST', { id: student.id }).then(result => result.data) : Promise.resolve(null)
             ])
             if (version !== profileVersion.current) return
@@ -567,6 +583,9 @@ export default function StudentManagement({
                 pdf.text('ACTIVATION CODE', x + cellW / 2, y + 48, {
                     align: 'center'
                 })
+                pdf.setFontSize(6)
+                const period = (student.academic_period_label || 'Not assigned').replaceAll('–', '-')
+                pdf.text(period, x + cellW / 2, y + 58, { align: 'center', maxWidth: cellW - 4 })
                 pdf.setFont('courier', 'bold')
                 pdf.setFontSize(12)
                 pdf.text(student.activation_code, x + cellW / 2, y + 54, {
@@ -830,7 +849,7 @@ export default function StudentManagement({
                     className="sm-form"
                     onSubmit={save}
                 >
-                    <AcademicPeriodSelect accessToken={accessToken} value={registrationPeriod} onChange={setRegistrationPeriod} required openOnly defaultCurrent />
+                    <AcademicPeriodSelect accessToken={accessToken} value={registrationPeriod} onChange={setRegistrationPeriod} required openOnly defaultCurrent readOnly />
                     <label>
                         Student Number
                         <input
@@ -947,15 +966,15 @@ export default function StudentManagement({
             }}
         >
             <p>Upload an .xlsx file up to 5 MB with at most 500 students. Existing student numbers are skipped. Use Edit Profile or Multiple edits to update their year level, section or semester.</p>
-            <AcademicPeriodSelect accessToken={accessToken} value={importPeriod} onChange={setImportPeriod} required openOnly defaultCurrent />
+            <AcademicPeriodSelect accessToken={accessToken} value={importPeriod} onChange={setImportPeriod} required openOnly defaultCurrent readOnly />
             <p>
-                <a
+                <button type="button"
                     className="sm-btn"
-                    href={`${import.meta.env.BASE_URL}student_import_template.xlsx`}
-                    download="student_import_template.xlsx"
-                >Download Excel Template</a>
+                    onClick={downloadImportTemplate}
+                >Download Excel Template</button>
             </p>
             <p>Required row 1 headers: student_number, full_name, section, course, year_level.</p>
+            <p>The template includes academic_year_and_semester from Academic Settings. Keep this value unchanged; a template from another semester is rejected.</p>
             {error && <p
                 role="alert"
                 className="sm-alert error"

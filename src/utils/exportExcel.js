@@ -1,11 +1,11 @@
 import * as XLSX from 'xlsx'
 export function createExportWorkbook(result) {
-    const columns = Object.entries(result.columns)
+    const columns = [['academic_period_label', 'Academic Year / Semester'], ...Object.entries(result.columns).filter(([key]) => key !== 'academic_period_label')]
     const values = [columns.map(([, label]) => {
         return label
     }), ...result.data.map(row => {
         return columns.map(([key]) => {
-            const value = row[key]
+            const value = key === 'academic_period_label' ? (row[key] || result.academic_period_label || 'Not assigned') : row[key]
             return ['fine_amount', 'total_fine', 'amount', 'paid_amount', 'pending_amount', 'outstanding', 'violation_fines', 'absence_fines'].includes(key) && value !== null && value !== undefined ? Number(value) : String(value ?? '')
         })
     })]
