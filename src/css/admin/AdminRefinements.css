@@ -135,10 +135,12 @@
 .admin-portal .academic-period-form > p { grid-column: 1 / -1; grid-row: 2; margin: 0; font-size: 13px; color: #526153; }
 .admin-portal .academic-period-form > label:has(input[type=checkbox]) { min-height: 42px; }
 .admin-portal .academic-period-form > button { justify-self: end; }
-.admin-portal .academic-legacy-section { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 24px; }
-.admin-portal .academic-legacy-section h3 { margin: 0 0 8px; }
-.admin-portal .academic-legacy-section .payment-form { max-width: none; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 16px; }
-.admin-portal .academic-legacy-section .payment-form > :is(p, button) { grid-column: 1 / -1; justify-self: start; }
+.admin-portal .academic-history-section { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 24px; }
+.admin-portal .academic-history-section h3 { margin: 0 0 8px; }
+.admin-portal .academic-semester-snapshot { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.admin-portal .academic-semester-snapshot summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.admin-portal .academic-history-section .payment-form { max-width: none; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 16px; }
+.admin-portal .academic-history-section .payment-form > :is(p, button) { grid-column: 1 / -1; justify-self: start; }
 .admin-portal .student-profile-card { margin: 16px 0 0; width: 100%; max-width: 800px; }
 .admin-portal .student-profile-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
 .admin-portal .student-profile-card dd { margin: 4px 0 0; overflow-wrap: anywhere; }
@@ -165,7 +167,7 @@
     .admin-portal .portal-today { width: 100%; padding-left: 56px; }
     .admin-portal .portal-page-title { flex: 1; }
     .admin-portal .sm-head { align-items: flex-start; }
-    .admin-portal :is(.sm-filter-panel .sm-filters, .sm-filter-panel .org-account-filters, .payment-actions, .academic-period-form, .academic-legacy-section .payment-form, .student-profile-card dl, .org-account-fields) { grid-template-columns: minmax(0, 1fr); }
+    .admin-portal :is(.sm-filter-panel .sm-filters, .sm-filter-panel .org-account-filters, .payment-actions, .academic-period-form, .academic-history-section .payment-form, .student-profile-card dl, .org-account-fields) { grid-template-columns: minmax(0, 1fr); }
     .admin-portal :is(.sm-panel, .admin-analytics, .admin-activity, .student-panel, .sm-modal) { padding: 16px; }
     .admin-portal .sm-filter-panel { padding: 0; }
     .admin-portal :is(.sm-filter-panel .sm-panel-head, .sm-filter-panel .sm-filters, .admin-period-filter) { padding: 16px; }

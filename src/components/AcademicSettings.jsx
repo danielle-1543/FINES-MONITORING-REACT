@@ -1,43 +1,46 @@
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../utils/apiRequest'
 import { trackEvent } from '../config/posthog'
+import { askConfirmation } from '../utils/confirmation'
+import { date } from '../utils/format'
+
+const semesterChangeNote = 'Note: Only the academic year and semester are updated automatically for all students. Make other specific changes, such as year level, course or section, in Student Management using Edit Profile or Multiple edits. Accounts and QR codes stay unchanged.'
 
 export default function AcademicSettings({ accessToken }) {
     const [periods, setPeriods] = useState([])
     const [form, setForm] = useState({ year_start: new Date().getFullYear(), term: 'FIRST', is_current: true })
     const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
-    const [legacy, setLegacy] = useState(null), [selection, setSelection] = useState(''), [periodId, setPeriodId] = useState(''), [preview, setPreview] = useState(null)
+    const [history, setHistory] = useState([])
     useEffect(() => {
         const controller = new AbortController()
-        apiRequest('/api/academic-periods', accessToken, undefined, controller.signal).then(result => setPeriods(result.data))
+        Promise.all([apiRequest('/api/academic-periods', accessToken, undefined, controller.signal), apiRequest('/api/admin/academic-periods/history', accessToken, undefined, controller.signal)]).then(([periods, history]) => { if (!controller.signal.aborted) { setPeriods(periods.data); setHistory(history.data) } })
             .catch(error => { if (error.name !== 'AbortError') setError(error.message) })
         return () => controller.abort()
     }, [accessToken])
     async function save(values) {
         setBusy(true); setError(''); setMessage('')
         try {
-            await apiRequest('/api/admin/academic-periods/save', accessToken, values)
+            const current = periods.find(period => Number(period.is_current) === 1)
+            const switching = values.is_current && (!current || Number(current.id) !== Number(values.id))
+            let payload = values
+            if (switching) {
+                const preview = (await apiRequest('/api/admin/academic-periods/save', accessToken, { ...values, preview: true })).data
+                const confirmed = await askConfirmation({ title: 'Change academic year and semester?', confirmLabel: 'Apply to all students',
+                    message: `Are you sure you want to change from ${preview.from || 'no current academic period'} to ${preview.to}? This will automatically update all ${preview.students} student record(s) to the selected academic year and semester. Student data from before the change will be saved, and the previous semester will close. Existing fines, attendance and payments will remain in their original semester.`,
+                    note: semesterChangeNote })
+                if (!confirmed) return
+                payload = { ...values, preview: false, fingerprint: preview.fingerprint }
+            }
+            const result = await apiRequest('/api/admin/academic-periods/save', accessToken, payload)
+            setHistory((await apiRequest('/api/admin/academic-periods/history', accessToken)).data)
             setPeriods((await apiRequest('/api/academic-periods', accessToken)).data)
-            setMessage('Academic settings saved. Existing records keep their original semesters.')
+            setMessage(switching ? `Academic year and semester changed. ${result.data.students_updated} student record(s) updated automatically. Previous records and student snapshots are saved below.` : 'Academic settings saved.')
             trackEvent('academic_period_updated')
         } catch (error) { setError(error.message) } finally { setBusy(false) }
     }
-    async function classify(confirm = false) {
-        setBusy(true); setError('')
-        try {
-            const [kind, source] = selection.split(':')
-            const result = await apiRequest('/api/admin/academic-periods/classify', accessToken, {
-                kind, source_id: Number(source), academic_period_id: Number(periodId), preview: !confirm,
-                ...(confirm ? { fingerprint: preview.fingerprint } : {})
-            })
-            setMessage(result.data.message)
-            setPreview(confirm ? null : result.data)
-            if (confirm) { setLegacy((await apiRequest('/api/admin/academic-periods/legacy', accessToken)).data); setSelection('') }
-        } catch (error) { setError(error.message); setPreview(null) } finally { setBusy(false) }
-    }
     return <section className="student-panel payment-page academic-settings">
         <h2>Academic Settings</h2>
-        <p>Choose the academic year and semester used for new records. Calendar dates are not required. Changing the current semester never moves old records.</p>
+        <p>Choose the academic year and semester used for new records. Calendar dates are not required. Changing the current semester requires confirmation, saves the previous student data and updates all students to the new semester. Old fines, attendance and payments keep their original semester.</p>
         {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
         <form className="payment-form academic-period-form" onSubmit={event => { event.preventDefault(); void save(form) }}>
             <label>Academic year starts<input type="number" required min="2000" max="2200" value={form.year_start} onChange={event => setForm({ ...form, year_start: event.target.value })} /></label>
@@ -48,27 +51,23 @@ export default function AcademicSettings({ accessToken }) {
             <label><input type="checkbox" checked={form.is_current} onChange={event => setForm({ ...form, is_current: event.target.checked })} />Make this the current academic period</label>
             <button disabled={busy}>Create academic period</button>
         </form>
+        <p>{semesterChangeNote}</p>
         <div className="student-table"><table><thead><tr><th>Academic period</th><th>Status</th><th>Current</th><th>Actions</th></tr></thead>
             <tbody>{periods.map(period => <tr key={period.id}><td>{period.label}</td><td>{period.status}</td><td>{Number(period.is_current) ? 'Current' : '—'}</td>
                 <td><button disabled={busy || Boolean(Number(period.is_current))} onClick={() => save({ ...period, is_current: true, status: 'OPEN' })}>Set current</button>{' '}
-                    <button disabled={busy} onClick={() => save({ ...period, is_current: false, status: period.status === 'OPEN' ? 'CLOSED' : 'OPEN' })}>{period.status === 'OPEN' ? 'Close semester' : 'Reopen semester'}</button></td></tr>)}</tbody></table></div>
-        <section className="academic-legacy-section">
-        <h3>Classify existing legacy records</h3>
-        <p>Old records are unassigned until reviewed. Classification preserves original cap rules, amounts, payment allocations, notification IDs and receipts.</p>
-        <button disabled={busy} onClick={async () => {
-            try { setLegacy((await apiRequest('/api/admin/academic-periods/legacy', accessToken)).data) } catch (error) { setError(error.message) }
-        }}>Load legacy records</button>
-        {legacy && <div className="payment-form">
-            <label>Legacy source<select value={selection} onChange={event => { setSelection(event.target.value); setPreview(null) }}><option value="">Choose source</option>
-                {legacy.events.map(event => <option key={`e${event.id}`} value={`event:${event.id}`}>Event #{event.id} · {event.organization_name} · {event.name}</option>)}
-                {legacy.violations.map(row => <option key={`v${row.id}`} value={`violation:${row.id}`}>Violation #{row.id} · {row.organization_name} · {row.student_number} · {row.violation_name}</option>)}
-            </select></label>
-            <label>Assign academic period<select value={periodId} onChange={event => { setPeriodId(event.target.value); setPreview(null) }}><option value="">Choose semester</option>
-                {periods.map(period => <option key={period.id} value={period.id}>{period.label}</option>)}</select></label>
-            <button disabled={busy || !selection || !periodId} onClick={() => classify()}>Preview classification</button>
-            {preview && <><p>{preview.period}: {preview.scans} attendance records and {preview.violations} violation records.</p>
-                <button disabled={busy} onClick={() => classify(true)}>Confirm classification</button></>}
-        </div>}
+                    <button disabled={busy || Boolean(Number(period.is_current))} title={Number(period.is_current) ? 'Switch to another semester to close the current one.' : undefined} onClick={() => save({ ...period, is_current: false, status: period.status === 'OPEN' ? 'CLOSED' : 'OPEN' })}>{period.status === 'OPEN' ? 'Close semester' : 'Reopen semester'}</button></td></tr>)}</tbody></table></div>
+        <section className="academic-history-section">
+            <h3>Previous semester records</h3>
+            <p>Before each semester change, student data is saved here. Original attendance, violations, fines and payments remain under the semester in which they occurred.</p>
+            {!history.some(entry => entry.snapshot.from) && <p>No previous semester change has been recorded yet.</p>}
+            {history.filter(entry => entry.snapshot.from).map(entry => <details key={entry.id} className="academic-semester-snapshot">
+                <summary>{entry.snapshot.from.label} → {entry.snapshot.to.label} · {date(entry.changed_at)}</summary>
+                <p>{entry.snapshot.students.length} student records saved before the change.</p>
+                <p>Preserved records: {entry.snapshot.records.org_events} events · {entry.snapshot.records.org_scan_records} scan records · {entry.snapshot.records.org_violation_records} violation records · {entry.snapshot.records.payment_claims} payment claims.</p>
+                <div className="student-table"><table><thead><tr><th>Student number</th><th>Name</th><th>Course</th><th>Year level</th><th>Section</th></tr></thead>
+                    <tbody>{entry.snapshot.students.map(student => <tr key={student.id}><td>{student.student_number}</td><td>{student.full_name}</td><td>{student.course}</td><td>{student.year_level}</td><td>{student.section}</td></tr>)}</tbody>
+                </table></div>
+            </details>)}
         </section>
     </section>
 }

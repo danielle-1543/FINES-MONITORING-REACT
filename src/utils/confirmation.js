@@ -1,6 +1,6 @@
 let active = false
 
-export function askConfirmation({ title = 'Confirm action', message, confirmLabel = 'Confirm' }) {
+export function askConfirmation({ title = 'Confirm action', message, note, confirmLabel = 'Confirm' }) {
     if (active) {
         return Promise.resolve(false)
     }
@@ -10,7 +10,7 @@ export function askConfirmation({ title = 'Confirm action', message, confirmLabe
         const dialog = document.createElement('dialog')
         dialog.className = 'action-confirmation'
         dialog.setAttribute('aria-labelledby', 'confirmation-title')
-        dialog.setAttribute('aria-describedby', 'confirmation-message')
+        dialog.setAttribute('aria-describedby', note ? 'confirmation-message confirmation-note' : 'confirmation-message')
         const heading = document.createElement('h2')
         heading.id = 'confirmation-title'
         heading.textContent = title
@@ -41,7 +41,14 @@ export function askConfirmation({ title = 'Confirm action', message, confirmLabe
             finish(false)
         }
         actions.append(cancel, confirm)
-        dialog.append(heading, description, actions)
+        dialog.append(heading, description)
+        if (note) {
+            const detail = document.createElement('p')
+            detail.id = 'confirmation-note'
+            detail.textContent = note
+            dialog.append(detail)
+        }
+        dialog.append(actions)
         document.body.append(dialog)
         dialog.showModal()
         cancel.focus()

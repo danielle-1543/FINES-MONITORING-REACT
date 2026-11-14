@@ -284,7 +284,7 @@ export default function AdminDashboard({
             dashboard: 'Student accounts and system activity.',
             students: 'Register students and update their semester, profile and account records.',
             organizations: 'Manage organization accounts and program access.',
-            academic: 'Configure academic periods and review legacy record classifications.',
+            academic: 'Change the current semester and review saved previous-semester records.',
             profile: 'Manage your administrator account and sign-in details.'
         }[activePage]}
 onNavigate={setActivePage}
