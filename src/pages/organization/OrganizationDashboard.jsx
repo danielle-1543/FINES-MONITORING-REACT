@@ -396,7 +396,7 @@ function Events({
     </>
 }
 function RecordSorting({ filters, onChange }) {
-    return <label className="org-field">Sort
+    return <label className="org-field record-sort-field">Sort
         <select value={filters.sort || 'az'} onChange={event => onChange({ sort: event.target.value })}>
             <option value="az">A–Z</option>
             <option value="recent">Recent</option>
@@ -656,7 +656,7 @@ function EventScanner({
             await releaseCamera(reader.current, starting.current)
             reader.current = null
             if (mounted.current) {
-                setFeedback(`Camera failed: ${error.message || error}. Allow camera access on localhost or HTTPS, or use the token field.`)
+                setFeedback(`Camera failed: ${error.message || error}. Allow camera access on localhost or HTTPS.`)
             }
         } finally {
             if (mounted.current) {
@@ -675,7 +675,9 @@ function EventScanner({
         }
     }
     return <>
-        {event ? <p>Scanning: <strong>{windowStatus(event, now)}</strong> · {pht(event.scan_starts_at)} to {pht(event.scan_ends_at)}</p> : <p>Scan a student and choose one or more violations. This scanner is available anytime, with or without an attendance event.</p>}
+        <section className={event ? 'attendance-scanner-controls' : 'org-panel violation-scanner-panel'}>
+        {!event && <h2>Violation Scanner</h2>}
+        {event ? <p>Scanning: <strong>{windowStatus(event, now)}</strong> · {pht(event.scan_starts_at)} to {pht(event.scan_ends_at)}</p> : <p>Scan a student and choose one or more violations. Available with or without an attendance event.</p>}
         <div className="org-actions">
             <button
                 onClick={startCamera}
@@ -696,6 +698,8 @@ function EventScanner({
             aria-live="polite"
             className="org-feedback"
         >{feedback}</p>
+        </section>
+        <section className={event ? 'attendance-records-panel' : 'org-panel violation-records-panel'}>
         <div className="org-record-heading">
             <h3>{event ? `Attendance Records — ${event.name}` : 'Violation Records'}</h3>
         </div>
@@ -745,12 +749,14 @@ function EventScanner({
             setPage(1)
             setLoading(true)
         }} />
+            <div className="org-record-filter-actions">
             <button type="button" className="secondary" onClick={() => {
                 setRecordFilters({ student_number: '', section: '', year_level: '', attendance_status: '' })
                 setPage(1)
             }}>Clear Filters</button>
             <DownloadExcel path={`records/export?${recordQuery}`} accessToken={accessToken}
                 filename={event ? 'attendance-records.xlsx' : 'violation-records.xlsx'} />
+            </div>
         </div>
         {loading ? <p>Loading records…</p> : <><RecordTable
             records={records}
@@ -763,6 +769,7 @@ function EventScanner({
                     setLoading(true)
                 }}
             /></>}
+        </section>
         {confirmation && <Modal
             title={duplicateWarning ? 'Violation Already Recorded Today' : 'Confirm Scan'}
             onClose={cancel}
@@ -1269,14 +1276,12 @@ export default function OrganizationDashboard({
                         saving={saving}
                     />
                 </details>
-                    <section className="org-panel">
-                        <h2>Violation Scanner</h2>
                         <EventScanner
                             types={data.types}
                             accessToken={accessToken}
                             now={now}
                         />
-                    </section></>}
+                    </>}
             </>}
         </div>
     </PortalLayout>

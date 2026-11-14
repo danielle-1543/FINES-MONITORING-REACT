@@ -218,3 +218,192 @@
     #root .system-table { min-width: 0; font-size: 10pt; }
     #root :is(.org-table, .student-table, .sm-table-wrap, .admin-activity-table) { overflow: visible; }
 }
+
+/* Attendance and violation records: deliberate rows instead of flex squeezing. */
+#root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: end;
+    gap: 14px 12px;
+    padding: 16px;
+    margin: 12px 0 18px;
+    border: 1px solid var(--table-line);
+    border-radius: 8px;
+    background: #fafbf9;
+}
+#root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar > label {
+    grid-column: span 3;
+    min-width: 0;
+    width: 100%;
+    margin: 0;
+    gap: 6px;
+}
+#root .org-shell .org-record-filters.org-filter-toolbar > :is(label:first-child, .org-filter-event, .org-filter-search) {
+    grid-column: span 4;
+}
+#root .org-shell .org-event-record-filters.org-filter-toolbar > label {
+    grid-column: span 2;
+}
+#root .org-shell .org-event-record-filters.org-filter-toolbar > .org-filter-search {
+    grid-column: span 4;
+}
+#root .org-shell :is(.org-record-filters, .org-event-record-filters) .org-record-filter-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--table-line);
+}
+#root .org-shell .org-record-filter-actions > button {
+    flex: 0 0 auto;
+    min-width: 110px;
+}
+#root .org-shell .org-record-filter-actions > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+#root .org-shell .org-record-filter-actions button { min-width: 110px; }
+#root .org-shell .org-pagination > div,
+#root .org-shell .org-actions {
+    gap: 10px;
+}
+#root .org-shell .org-types {
+    margin-bottom: 20px;
+    border: 1px solid var(--table-line);
+    border-radius: 8px;
+    overflow: hidden;
+}
+#root .org-shell .org-types > summary {
+    padding: 14px 16px;
+    background: #f3f6f1;
+    color: var(--forest);
+    font-size: .86rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+#root .org-shell .org-types .org-panel {
+    padding: 16px;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+#root .org-shell .org-types .org-form {
+    display: grid;
+    grid-template-columns: minmax(200px, 2fr) minmax(140px, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+    margin: 16px 0 20px;
+}
+#root .org-shell .org-types .org-form label {
+    grid-column: auto;
+    margin: 0;
+    gap: 6px;
+    font-size: var(--table-small);
+    color: var(--table-muted);
+}
+#root .org-shell .org-types .org-form :is(input, button) {
+    min-height: var(--table-control-height);
+    height: var(--table-control-height);
+    box-sizing: border-box;
+    padding: 8px 12px;
+    font-size: var(--table-font);
+    border-radius: var(--table-radius);
+}
+#root .org-shell .org-record-heading { margin: 20px 0 8px; }
+#root .org-shell .org-record-heading h3 { margin: 0; }
+#root .org-shell .org-feedback:empty,
+#root .org-shell .org-reader:empty { display: none; }
+@media (max-width: 1000px) {
+    #root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar > label { grid-column: span 1; }
+    #root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar > .org-filter-search { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+    #root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar { padding: 12px; gap: 12px; }
+    #root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar > label { grid-column: 1 / -1; }
+    #root .org-shell .org-record-filter-actions > :is(button, div) { flex: 1 1 0; min-width: 0; }
+    #root .org-shell .org-record-filter-actions > div button { width: 100%; }
+    #root .org-shell .org-types .org-form { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 1000px) {
+    #root .org-shell .org-record-filters.org-filter-toolbar > :is(label:first-child, .org-filter-event) { grid-column: span 1; }
+    #root .org-shell .org-record-filters.org-filter-toolbar > .org-filter-search,
+    #root .org-shell .org-event-record-filters.org-filter-toolbar > .org-filter-search { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+    #root .org-shell .org-record-filters.org-filter-toolbar > :is(label:first-child, .org-filter-event) { grid-column: 1 / -1; }
+}
+
+/* Explicit compact tracks keep sorting and actions out of oversized flex rows. */
+#root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px 12px;
+    align-items: end;
+}
+#root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar > label,
+#root .org-shell .org-record-filters.org-filter-toolbar > :is(label:first-child, .org-filter-event, .org-filter-search),
+#root .org-shell .org-event-record-filters.org-filter-toolbar > .org-filter-search {
+    grid-column: auto;
+    width: 100%;
+    min-width: 0;
+}
+#root .org-shell .org-record-filters.org-filter-toolbar > label:first-child,
+#root .org-shell .org-record-filters.org-filter-toolbar > .org-filter-event {
+    grid-column: span 2;
+}
+#root .org-shell :is(.org-record-filters, .org-event-record-filters) .record-sort-field {
+    max-width: 200px;
+}
+#root .org-shell :is(.org-record-filters, .org-event-record-filters) .org-record-filter-actions {
+    grid-column: span 3;
+    align-self: end;
+    justify-self: end;
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+}
+#root .org-shell .org-record-filter-actions > :is(button, div) {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+}
+#root .org-shell .org-record-filter-actions button {
+    height: var(--table-control-height);
+    min-height: var(--table-control-height);
+    min-width: 112px;
+    margin: 0;
+    white-space: nowrap;
+}
+#root .org-shell :is(.violation-scanner-panel, .violation-records-panel) {
+    padding: 20px;
+    margin: 0 0 20px;
+    border: 1px solid var(--table-line);
+    border-radius: 8px;
+    background: white;
+    box-shadow: none;
+}
+#root .org-shell :is(.violation-scanner-panel, .violation-records-panel) :is(h2, h3) { margin: 0 0 10px; }
+#root .org-shell .violation-records-panel .org-record-heading { margin: 0; }
+#root .org-shell .violation-scanner-panel > p { color: var(--table-muted); font-size: var(--table-font); margin: 0 0 16px; }
+#root .org-shell .attendance-records-panel { margin-top: 24px; }
+@media (max-width: 800px) {
+    #root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #root .org-shell :is(.org-record-filters, .org-event-record-filters) .org-record-filter-actions { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) {
+    #root .org-shell :is(.org-record-filters, .org-event-record-filters).org-filter-toolbar { grid-template-columns: minmax(0, 1fr); }
+    #root .org-shell .org-record-filters.org-filter-toolbar > :is(label:first-child, .org-filter-event) { grid-column: auto; }
+    #root .org-shell :is(.org-record-filters, .org-event-record-filters) .record-sort-field { max-width: none; }
+    #root .org-shell :is(.org-record-filters, .org-event-record-filters) .org-record-filter-actions { justify-self: stretch; justify-content: flex-start; }
+}
