@@ -16,11 +16,12 @@ export default function Payments({
     const [data, setData] = useState(null),
         [error, setError] = useState(''),
         [notice, setNotice] = useState(() => new URLSearchParams(window.location.search).has('xendit')
-            ? 'You returned from Xendit test checkout. Payment is confirmed only after provider verification. Refresh or check the pending payment status below.' : '')
+            ? 'You returned from Xendit test checkout. Payment is confirmed only after provider verification. Your payment status is being checked automatically.' : '')
     const [version, setVersion] = useState(0),
         [busy, setBusy] = useState(false),
         [status, setStatus] = useState('ALL')
     const [historyPage, setHistoryPage] = useState(1)
+    const [syncError, setSyncError] = useState('')
     const [receipt, setReceipt] = useState(null),
         [review, setReview] = useState(null),
         [note, setNote] = useState('')
@@ -91,6 +92,65 @@ export default function Payments({
             return clearInterval(timer)
         }
     }, [])
+    const pendingXendit = organization ? '' : (data?.claims || [])
+        .filter(claim => claim.method === 'XENDIT_TEST' && claim.status === 'PENDING')
+        .map(claim => Number(claim.id)).sort((a, b) => a - b).join(',')
+    const latestOnChanged = useRef(onChanged)
+    useEffect(() => { latestOnChanged.current = onChanged }, [onChanged])
+    useEffect(() => {
+        if (!pendingXendit) return
+        const controller = new AbortController()
+        let timer, inFlight = false
+        async function sync() {
+            if (inFlight || controller.signal.aborted) return
+            clearTimeout(timer)
+            if (document.visibilityState === 'hidden' || lock.current) {
+                timer = setTimeout(sync, 15000)
+                return
+            }
+            inFlight = true
+            let failed = false, changed = false
+            try {
+                const results = await Promise.allSettled(pendingXendit.split(',').map(async id => {
+                    const response = await apiFetch(`/api/student/payments/xendit/status?id=${id}`, {
+                        headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+                        cache: 'no-store', signal: controller.signal
+                    })
+                    const result = await response.json()
+                    if (!response.ok || !result.success) throw new Error(result.message || result.error || 'Unable to verify payment.')
+                    return result.data.status
+                }))
+                if (controller.signal.aborted) return
+                changed = results.some(result => result.status === 'fulfilled' && result.value !== 'PENDING')
+                const rejected = results.find(result => result.status === 'rejected')
+                if (rejected) throw rejected.reason
+                setSyncError('')
+            } catch (reason) {
+                if (controller.signal.aborted) return
+                failed = true
+                setSyncError('Automatic payment verification is temporarily unavailable. We will retry. ' + reason.message)
+            } finally {
+                inFlight = false
+                if (!controller.signal.aborted) {
+                    if (changed) {
+                        setVersion(v => v + 1)
+                        setNotice('Payment status updated automatically. See Payment history for the verified result.')
+                        latestOnChanged.current?.()
+                    }
+                    timer = setTimeout(sync, failed ? 30000 : 15000)
+                }
+            }
+        }
+        const onFocus = () => { void sync() }
+        void sync()
+        window.addEventListener('focus', onFocus)
+        document.addEventListener('visibilitychange', onFocus)
+        return () => {
+            controller.abort(); clearTimeout(timer)
+            window.removeEventListener('focus', onFocus)
+            document.removeEventListener('visibilitychange', onFocus)
+        }
+    }, [accessToken, pendingXendit])
     async function action(path, body) {
         if (lock.current) {
             return false
@@ -188,6 +248,7 @@ export default function Payments({
     const history = paymentPage(claims.filter(claim => status === 'ALL' || claim.status === status), historyPage, 10)
     return <section className="payment-page">
         <h2>{organization ? 'Payment Claim Review' : 'Payment Management'}</h2>
+        {pendingXendit && syncError && <p role="alert" className="account-error">{syncError}</p>}
         {error && <p
             role="alert"
             className="account-error"
@@ -278,8 +339,8 @@ export default function Payments({
                                     >View Receipt</button>}
                                     {c.status === 'PENDING' && c.method === 'XENDIT_TEST' && (organization
                                         ? <span>Awaiting Xendit test confirmation</span>
-                                        : <><button type="button" disabled={busy} onClick={() => xenditCheckout(null, c.id)}>Check Xendit status</button>
-                                            <button type="button" disabled={busy} onClick={() => xenditCheckout(null, c.id, true)}>Resume test checkout</button></>)}
+                                        : <><small role="status">Checking payment automatically</small>
+                                            <button type="button" disabled={busy} onClick={() => xenditCheckout(null, c.id, true)}>Continue checkout</button></>)}
                                     {c.status === 'PENDING' && c.method !== 'XENDIT_TEST' && (organization ? <button
                                         disabled={busy}
                                         onClick={() => {

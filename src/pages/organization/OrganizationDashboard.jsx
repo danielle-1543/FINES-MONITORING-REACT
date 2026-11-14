@@ -697,15 +697,10 @@ function EventScanner({
         >{feedback}</p>
         <div className="org-record-heading">
             <h3>{event ? `Attendance Records — ${event.name}` : 'Violation Records'}</h3>
-            <DownloadExcel
-                path={`records/export?${recordQuery}`}
-                accessToken={accessToken}
-                filename={event ? 'attendance-records.xlsx' : 'violation-records.xlsx'}
-            />
         </div>
         <p>Export includes all matching records in the selected order.</p>
 
-        <div className="org-actions org-event-record-filters" role="group" aria-label="Search and filter recorded attendance">
+        <div className="org-actions org-event-record-filters org-filter-toolbar" role="group" aria-label="Search and filter records">
             {['student_number', 'section', 'year_level'].map(field => <label className={`org-field ${field === 'student_number' ? 'org-filter-search' : ''}`} key={field}>
                 {field === 'student_number' ? 'Student ID' : field === 'section' ? 'Section' : 'Year Level'}
                 {field === 'year_level' ? <select value={recordFilters[field]} onChange={e => {
@@ -753,6 +748,8 @@ function EventScanner({
                 setRecordFilters({ student_number: '', section: '', year_level: '', attendance_status: '' })
                 setPage(1)
             }}>Clear Filters</button>
+            <DownloadExcel path={`records/export?${recordQuery}`} accessToken={accessToken}
+                filename={event ? 'attendance-records.xlsx' : 'violation-records.xlsx'} />
         </div>
         {loading ? <p>Loading records…</p> : <><RecordTable
             records={records}
@@ -908,7 +905,7 @@ function Records({
     }, [query, page, accessToken])
     return <section className="org-panel">
         <h2>{kind === 'ATTENDANCE' ? 'Attendance' : 'Violations'}</h2>
-        <div className="org-record-filters" role="group" aria-label="Search and filter records">
+        <div className="org-record-filters org-filter-toolbar" role="group" aria-label="Search and filter records">
             <AcademicPeriodSelect accessToken={accessToken} value={filters.academic_period_id || 'all'} onChange={value => {
                 setFilters(current => ({ ...current, academic_period_id: value })); setPage(1); setLoading(true); setError('')
             }} includeAll includeLegacy />
@@ -946,129 +943,183 @@ function Records({
             /></>}
     </section>
 }
-function StudentRecords({
-    accessToken,
-    scope
-}) {
-    const [filters, setFilters] = useState({
-        search: '',
-        course: '',
-        year_level: '',
-        section: '',
-        page: 1
-    })
+function StudentRecords({ accessToken, scope }) {
+    const emptyFilters = {
+        search: '', course: '', year_level: '', section: '',
+        account_status: '', activation_status: '', sort: 'az'
+    }
+    const [filters, setFilters] = useState(emptyFilters)
+    const [students, setStudents] = useState(null)
+    const [page, setPage] = useState(1)
+    const [perPage, setPerPage] = useState(50)
     const [selectedStudent, setSelectedStudent] = useState(null)
-    const [options, setOptions] = useState({ course: [], year_level: [] })
-    const [result, setResult] = useState(null)
     const [error, setError] = useState('')
-    const query = new URLSearchParams(filters).toString()
+    const [exporting, setExporting] = useState(false)
+    const [version, setVersion] = useState(0)
+
     useEffect(() => {
         const controller = new AbortController()
-        const timer = setTimeout(() => {
-            api(`students?${query}`, accessToken, undefined, controller.signal).then(response => {
-                setResult(response)
-                setOptions(response.filter_options)
+        async function loadStudents() {
+            // The existing endpoint enforces organization scope on every page.
+            const first = await api('students?page=1', accessToken, undefined, controller.signal)
+            const rows = [...first.data]
+            for (let next = 2; next <= first.pagination.total_pages; next++) {
+                const response = await api(`students?page=${next}`, accessToken, undefined, controller.signal)
+                rows.push(...response.data)
+            }
+            if (!controller.signal.aborted) {
                 setError('')
-            }).catch(err => {
-                if (err.name !== 'AbortError') {
-                    setError(err.message)
-                }
-            })
-        }, 250)
-        return () => {
-            clearTimeout(timer)
-            controller.abort()
+                setStudents(Array.from(new Map(rows.map(student => [student.id, student])).values()))
+                setPerPage(first.pagination.per_page || 50)
+            }
         }
-    }, [query, accessToken])
-    return <section className="org-panel">
-        <div className="org-record-heading">
-            <h2>Student Records</h2>
-            <DownloadExcel
-                path={`students/export?${query}`}
-                accessToken={accessToken}
-                filename="student-records.xlsx"
-            />
+        loadStudents().catch(err => {
+            if (err.name !== 'AbortError') setError(err.message)
+        })
+        return () => controller.abort()
+    }, [accessToken, version])
+
+    function matches(student) {
+        const search = filters.search.trim().toLocaleLowerCase()
+        return (!search || `${student.full_name} ${student.student_number}`.toLocaleLowerCase().includes(search))
+            && ['course', 'year_level', 'account_status', 'activation_status'].every(field => !filters[field] || student[field] === filters[field])
+            && (!filters.section.trim() || student.section?.toLocaleLowerCase() === filters.section.trim().toLocaleLowerCase())
+    }
+    function compare(left, right) {
+        if (filters.sort === 'recent') {
+            const dates = String(right.registered_at || '').localeCompare(String(left.registered_at || ''))
+            if (dates) return dates
+            return Number(right.id) - Number(left.id)
+        }
+        const names = left.full_name.localeCompare(right.full_name, undefined, { sensitivity: 'base' })
+        return (filters.sort === 'za' ? -names : names)
+            || left.student_number.localeCompare(right.student_number)
+    }
+    const matching = (students || []).filter(matches).sort(compare)
+    const pages = Math.max(1, Math.ceil(matching.length / perPage))
+    const currentPage = Math.min(page, pages)
+    const visible = matching.slice((currentPage - 1) * perPage, currentPage * perPage)
+    const courses = scope?.all_courses
+        ? [...new Set((students || []).map(student => student.course))].filter(Boolean).sort()
+        : scope?.courses || []
+    const summary = [
+        ['Total Students', students?.length],
+        ['Active Accounts', students?.filter(student => student.account_status === 'ACTIVE').length],
+        ['Inactive Accounts', students?.filter(student => student.account_status === 'INACTIVE').length],
+        ['Pending Activations', students?.filter(student => student.activation_status === 'PENDING').length]
+    ]
+    function updateFilters(changes) {
+        setFilters(current => ({ ...current, ...changes }))
+        setPage(1)
+    }
+    async function exportStudents() {
+        setExporting(true)
+        setError('')
+        try {
+            const query = new URLSearchParams({
+                course: filters.course, year_level: filters.year_level,
+                section: filters.section.trim(), sort: filters.sort
+            })
+            const result = await api(`students/export?${query}`, accessToken)
+            // Apply UI-only status filters to fresh export rows, not just the visible page.
+            const rows = result.data.filter(matches).sort(compare)
+            const totals = { full_name: 'GRAND TOTAL' }
+            for (const field of ['violation_fines', 'absence_fines', 'fine_amount', 'outstanding']) {
+                totals[field] = rows.reduce((sum, row) => sum + Math.round(Number(row[field] || 0) * 100), 0) / 100
+            }
+            downloadExcel({ ...result, data: rows, totals }, 'student-records.xlsx')
+        } catch (err) {
+            setError(err.message)
+        } finally {
+            setExporting(false)
+        }
+    }
+    return <section className="org-panel org-student-directory">
+        <header className="org-record-heading">
+            <div>
+                <h2>Student Records</h2>
+                <p className="org-directory-scope">{scope?.all_courses ? 'All university courses' : courses.join(' · ')}</p>
+            </div>
+        </header>
+        <div className="org-directory-summary" aria-label="Organization student totals">
+            {summary.map(([label, value]) => <div key={label}>
+                <span>{label}</span>
+                <strong>{value === undefined ? '—' : value.toLocaleString()}</strong>
+            </div>)}
         </div>
-        <p>{scope?.all_courses ? 'USG can view students from every course.' : `Student access: ${(scope?.courses || []).join(', ')} only.`}</p>
-        <label className="org-field">Search students<input
-            value={filters.search}
-            placeholder="Student number, name, or section"
-            onChange={e => {
-                setFilters({
-                    ...filters,
-                    search: e.target.value,
-                    page: 1
-                })
-                setResult(null)
-                setError('')
-            }}
-        /></label>
-        <div className="org-actions">
-            {['course', 'year_level'].map(field => <label className="org-field" key={field}>
-                {field === 'course' ? 'Course' : 'Year Level'}
-                <select value={filters[field]} onChange={event => {
-                    setFilters({ ...filters, [field]: event.target.value, page: 1 })
-                    setResult(null)
-                }}>
-                    <option value="">All</option>
-                    {(field === 'year_level' ? ['1st Year', '2nd Year', '3rd Year', '4th Year']
-                        : scope?.all_courses ? options.course || [] : scope?.courses || []).filter(Boolean).map(value => <option key={value} value={value}>{value}</option>)}
+        <div className="org-filter-toolbar" aria-label="Student search and filters">
+            <label className="org-field org-search-field">Search students
+                <input value={filters.search} placeholder="Name or student number" maxLength={100}
+                    onChange={event => updateFilters({ search: event.target.value })} />
+            </label>
+            <label className="org-field">Course
+                <select value={filters.course} onChange={event => updateFilters({ course: event.target.value })}>
+                    <option value="">All assigned courses</option>
+                    {courses.map(course => <option key={course}>{course}</option>)}
                 </select>
-            </label>)}
-            <label className="org-field">Section<input placeholder="e.g. F1" value={filters.section} maxLength={100}
-                onChange={event => {
-                    setFilters({ ...filters, section: event.target.value, page: 1 })
-                    setResult(null)
-                }} /></label>
-            <button className="secondary" onClick={() => {
-                setFilters({ search: '', course: '', year_level: '', section: '', page: 1 })
-            }}>Clear Filters</button>
+            </label>
+            <label className="org-field">Year level
+                <select value={filters.year_level} onChange={event => updateFilters({ year_level: event.target.value })}>
+                    <option value="">All years</option>
+                    {['1st Year', '2nd Year', '3rd Year', '4th Year'].map(year => <option key={year}>{year}</option>)}
+                </select>
+            </label>
+            <label className="org-field">Section
+                <input value={filters.section} placeholder="e.g. F1" maxLength={100}
+                    onChange={event => updateFilters({ section: event.target.value })} />
+            </label>
+            <label className="org-field">Account status
+                <select value={filters.account_status} onChange={event => updateFilters({ account_status: event.target.value })}>
+                    <option value="">All accounts</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                </select>
+            </label>
+            <label className="org-field">Activation status
+                <select value={filters.activation_status} onChange={event => updateFilters({ activation_status: event.target.value })}>
+                    <option value="">All activations</option>
+                    <option value="ACTIVATED">Activated</option>
+                    <option value="PENDING">Pending</option>
+                </select>
+            </label>
+            <RecordSorting filters={filters} onChange={updateFilters} />
+            <div className="org-filter-buttons">
+                <button type="button" className="secondary" onClick={() => updateFilters(emptyFilters)}>Clear</button>
+                <button type="button" disabled={exporting || !students} onClick={exportStudents}>{exporting ? 'Exporting…' : 'Export Excel'}</button>
+                <button type="button" className="secondary" disabled={!students && !error} onClick={() => {
+                    setStudents(null)
+                    setError('')
+                    setVersion(value => value + 1)
+                }}>Refresh</button>
+            </div>
         </div>
-        <RecordSorting filters={filters} onChange={changes => {
-            setFilters(current => ({ ...current, ...changes, page: 1 }))
-            setResult(null)
-        }} />
-        {error ? <p role="alert">{error}</p> : !result ? <p>Loading students…</p> : <>
-            {!result.data.length ? <p>No students found.</p> : <div className="org-table">
+        {error && <p role="alert" className="org-feedback error">{error}</p>}
+        {!students ? <p role="status">{error ? 'Student records could not be loaded.' : 'Loading student records…'}</p> : <>
+            <div className="org-table org-directory-table" role="region" aria-label="Student records" tabIndex={0}>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Course</th>
-                            <th>Year Level</th>
-                            <th>Section</th>
-                            <th>Full Name</th>
-                            <th>Student Number</th>
-                            <th>Account</th>
-                            <th>Activation</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>{result.data.map(student => {
-                        return <tr key={student.student_number}>
-                            <td>{student.course}</td>
-                            <td>{student.year_level}</td>
-                            <td>{student.section}</td>
-                            <td>{student.full_name}</td>
-                            <td>{student.student_number}</td>
-                            <td>{student.account_status}</td>
-                            <td>{student.activation_status}</td>
-                            <td><button onClick={() => setSelectedStudent(student.id)}>View Record</button></td>
-                        </tr>
-                    })}</tbody>
+                    <thead><tr>
+                        <th scope="col">Student</th>
+                        <th scope="col">Year / Section</th>
+                        <th scope="col">Account Status</th>
+                        <th scope="col">Activation Status</th>
+                        <th scope="col">Actions</th>
+                    </tr></thead>
+                    <tbody>{visible.length ? visible.map(student => <tr key={student.id}>
+                        <td><strong>{student.full_name}</strong><small>{student.student_number} · {student.course}</small></td>
+                        <td>{student.year_level} · {student.section}</td>
+                        <td><span className={`org-status-badge ${student.account_status === 'ACTIVE' ? 'is-active' : 'is-inactive'}`}>
+                            {student.account_status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                        </span></td>
+                        <td><span className={`org-status-badge ${student.activation_status === 'ACTIVATED' ? 'is-active' : 'is-pending'}`}>
+                            {student.activation_status === 'ACTIVATED' ? 'Activated' : 'Pending'}
+                        </span></td>
+                        <td><button type="button" onClick={() => setSelectedStudent(student.id)}>View Record</button></td>
+                    </tr>) : <tr><td colSpan={5} className="org-empty-state">
+                        <strong>No students match these filters.</strong><small>Try a different name, student number, or clear the filters.</small>
+                    </td></tr>}</tbody>
                 </table>
-            </div>}
-            <Pagination
-                pagination={result.pagination}
-                onPage={page => {
-                    setFilters(current => {
-                        return {
-                            ...current,
-                            page
-                        }
-                    })
-                    setResult(null)
-                }}
-            />
+            </div>
+            <Pagination pagination={{ current_page: currentPage, total_pages: pages, total_records: matching.length }} onPage={setPage} />
         </>}
         {selectedStudent && <StudentRecord studentId={selectedStudent} accessToken={accessToken} onClose={() => setSelectedStudent(null)} />}
     </section>

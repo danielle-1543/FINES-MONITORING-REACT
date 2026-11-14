@@ -1258,3 +1258,179 @@ dialog.sm-profile-modal .sm-profile-footer > :last-child {
         margin-left: 0;
     }
 }
+
+/* Compact organization directories and related record tables. */
+.portal-layout .org-student-directory {
+    padding: 20px;
+    box-shadow: none;
+}
+.org-student-directory .org-record-heading {
+    margin-bottom: 14px;
+}
+.org-student-directory h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+.org-directory-scope {
+    margin: 4px 0 0;
+    font-size: .8rem;
+    color: var(--muted);
+}
+.org-directory-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+.org-directory-summary > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 6px;
+    background: #f3f6f2;
+}
+.org-directory-summary span {
+    font-size: .78rem;
+    color: var(--muted);
+}
+.org-directory-summary strong {
+    font-size: 1.25rem;
+    color: var(--forest);
+    font-variant-numeric: tabular-nums;
+}
+.org-shell .org-filter-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px;
+    padding: 12px 0 16px;
+    margin: 0 0 12px;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: none;
+}
+.org-shell .org-filter-toolbar > .org-field {
+    flex: 1 1 120px;
+    min-width: 110px;
+    margin: 0;
+    gap: 4px;
+    font-size: .74rem;
+    font-weight: 600;
+    color: var(--muted);
+}
+.org-shell .org-filter-toolbar > .org-search-field,
+.org-shell .org-filter-toolbar > .org-filter-search {
+    flex: 2 1 210px;
+}
+.org-shell .org-filter-toolbar input,
+.org-shell .org-filter-toolbar select {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    height: 38px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    font-size: .82rem;
+    color: var(--ink);
+    box-sizing: border-box;
+}
+.org-filter-buttons,
+.org-shell .org-record-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.org-shell .org-filter-toolbar button {
+    min-height: 38px;
+    padding: 8px 12px;
+    font-size: .78rem;
+    white-space: nowrap;
+}
+.portal-layout .org-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.portal-layout .org-table th {
+    padding: 10px 12px;
+    font-size: .74rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    background: #f5f7f4;
+    color: #52604e;
+    border-bottom: 1px solid var(--line);
+}
+.portal-layout .org-table td {
+    padding: 10px 12px;
+    font-size: .83rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #edf0eb;
+}
+.portal-layout .org-table tbody tr:nth-child(even) {
+    background: white;
+}
+.portal-layout .org-table tbody tr:hover {
+    background: #f7faf6;
+}
+.org-directory-table table {
+    min-width: 670px;
+}
+.org-directory-table td:first-child {
+    min-width: 210px;
+}
+.org-directory-table td > strong,
+.org-directory-table td > small {
+    display: block;
+}
+.org-directory-table td > small {
+    margin-top: 3px;
+    font-size: .73rem;
+    color: var(--muted);
+}
+.org-directory-table td:last-child,
+.org-directory-table th:last-child {
+    text-align: right;
+    white-space: nowrap;
+}
+.org-directory-table td button {
+    padding: 6px 10px;
+    min-height: 32px;
+    font-size: .75rem;
+    border-radius: 5px;
+}
+.org-status-badge {
+    display: inline-flex;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: .72rem;
+    line-height: 1.5;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.org-status-badge.is-active { background: #eaf3ea; color: #28623a; }
+.org-status-badge.is-inactive { background: #f2eeee; color: #795454; }
+.org-status-badge.is-pending { background: #faf2dd; color: #866620; }
+.portal-layout .org-directory-table .org-empty-state {
+    padding: 32px 12px;
+    text-align: center;
+}
+.org-shell .org-pagination {
+    gap: 12px;
+    font-size: .78rem;
+}
+@media (max-width: 700px) {
+    .org-directory-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .portal-layout .org-student-directory { padding: 14px; }
+    .org-shell .org-filter-toolbar > .org-field { flex-basis: calc(50% - 10px); }
+    .org-shell .org-filter-toolbar > .org-search-field,
+    .org-shell .org-filter-toolbar > .org-filter-search { flex-basis: 100%; }
+    .org-shell .org-filter-toolbar input,
+    .org-shell .org-filter-toolbar select,
+    .org-shell .org-filter-toolbar button { min-height: 44px; height: auto; }
+    .org-directory-table td button { min-height: 44px; }
+}
