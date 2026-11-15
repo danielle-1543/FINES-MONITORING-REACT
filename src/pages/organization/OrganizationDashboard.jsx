@@ -749,7 +749,8 @@ function EventScanner({
             setPage(1)
             setLoading(true)
         }} />
-            <div className="org-record-filter-actions">
+        </div>
+            <div className="org-record-filter-actions org-record-page-actions" role="group" aria-label="Record actions">
             <button type="button" className="secondary" onClick={() => {
                 setRecordFilters({ student_number: '', section: '', year_level: '', attendance_status: '' })
                 setPage(1)
@@ -757,7 +758,6 @@ function EventScanner({
             <DownloadExcel path={`records/export?${recordQuery}`} accessToken={accessToken}
                 filename={event ? 'attendance-records.xlsx' : 'violation-records.xlsx'} />
             </div>
-        </div>
         {loading ? <p>Loading records…</p> : <><RecordTable
             records={records}
             includeEvent={!event}
@@ -934,11 +934,11 @@ function Records({
                     </select>}
             </label>)}
             <RecordSorting filters={filters} onChange={changes => { setFilters(current => ({ ...current, ...changes })); setPage(1); setLoading(true); setError('') }} />
-            <div className="org-record-filter-actions">
+        </div>
+            <div className="org-record-filter-actions org-record-page-actions" role="group" aria-label="Record actions">
                 <button type="button" className="secondary" onClick={() => { setFilters({ search: '', section: '', year_level: '', attendance_status: '' }); setEventId(''); setPage(1); setLoading(true); setError(''); setRefreshVersion(value => value + 1) }}>Clear filters</button>
                 <DownloadExcel path={`records/export?${query}`} accessToken={accessToken} filename={kind === 'ATTENDANCE' ? 'attendance-records.xlsx' : 'violation-records.xlsx'} />
             </div>
-        </div>
         {error && <p role="alert" className="org-feedback error">{error}</p>}
         {loading ? <p>Loading records…</p> : <><RecordTable
             records={records}

@@ -112,6 +112,17 @@
 .org-record-filters :is(input, select), .org-event-record-filters :is(input, select) { width: 100%; min-width: 0; min-height: 44px; height: 44px; box-sizing: border-box; font-weight: 400; }
 .org-record-filter-actions { display: flex; flex-wrap: wrap; gap: 12px; grid-column: span 2; align-items: center; }
 .org-record-filter-actions > button { flex: 1 1 140px; min-height: 44px; }
+.org-shell .org-record-page-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    gap: 8px;
+    margin: 0 0 16px;
+}
+.org-shell .org-record-page-actions > :is(button, div) { flex: 0 0 auto; }
+.org-shell .org-record-page-actions button { min-height: 38px; white-space: nowrap; }
 .org-event-record-filters > button { grid-column: span 2; min-height: 44px; justify-self: start; }
 @media (max-width: 1000px) {
     .org-record-filters, .org-actions.org-event-record-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
