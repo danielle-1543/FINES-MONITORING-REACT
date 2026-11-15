@@ -1,9 +1,19 @@
-import { useState } from 'react'
-export default function PasswordInput(props) {
+import { useId, useState } from 'react'
+import { passwordRequirements } from '../utils/emailOtp'
+export default function PasswordInput({ showStrength = false, ...props }) {
     const [visible, setVisible] = useState(false)
-    return <span className="password-control">
+    const feedbackId = useId()
+    const rules = showStrength ? passwordRequirements(props.value) : []
+    const hasValue = typeof props.value === 'string' && props.value.length > 0
+    const met = rules.slice(0, 5).filter(rule => rule.met).length
+    const valid = rules.length > 0 && rules.every(rule => rule.met)
+    const score = !hasValue ? 0 : valid ? 4 : !rules[0]?.met || !rules[5]?.met ? 1 : met >= 4 ? 3 : 2
+    const strength = ['Not entered', 'Weak', 'Fair', 'Good', 'Strong'][score]
+    return <span className="password-field">
+        <span className="password-control">
         <input
             {...props}
+            aria-describedby={[props['aria-describedby'], showStrength ? feedbackId : null].filter(Boolean).join(' ') || undefined}
             type={visible ? 'text' : 'password'}
         />
         <button
@@ -36,5 +46,18 @@ export default function PasswordInput(props) {
                 /></>}
             </svg>
         </button>
+        </span>
+        {showStrength && <span id={feedbackId} className={`password-feedback password-feedback--${score}`}>
+            <span className="password-strength-label" role="status" aria-live="polite">Password strength: <strong>{strength}</strong></span>
+            <span className="password-strength-track" role="meter" aria-label="Password strength" aria-valuemin={0} aria-valuemax={4} aria-valuenow={score} aria-valuetext={strength}>
+                <span className="password-strength-fill" style={{ width: `${score * 25}%` }} />
+            </span>
+            <span className="password-requirements" role="group" aria-label="Password requirements">
+                {rules.map(rule => <span key={rule.label} className={`password-requirement${rule.met ? ' is-met' : ''}`}>
+                    <span className="password-rule-status">{rule.met ? 'Met: ' : 'Needed: '}</span>
+                    {rule.label}
+                </span>)}
+            </span>
+        </span>}
     </span>
 }

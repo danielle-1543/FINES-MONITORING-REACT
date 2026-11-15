@@ -1,5 +1,5 @@
 import { apiFetch } from '../../utils/apiFetch'
-import { otpRequest, withEmailOtp, PASSWORD_REQUIREMENTS, passwordError } from '../../utils/emailOtp'
+import { otpRequest, withEmailOtp, passwordError } from '../../utils/emailOtp'
 import { confirmSensitive } from '../../utils/confirmation'
 import PasswordInput from '../../components/PasswordInput'
 import { useEffect, useRef, useState } from 'react'
@@ -355,7 +355,7 @@ export default function StudentActivation({
                         autoComplete="new-password"
                         required
                         minLength={12}
-                        aria-describedby="registration-password-rules"
+                        showStrength
                         maxLength={72}
                         disabled={busy}
                         value={form.password}
@@ -366,7 +366,7 @@ export default function StudentActivation({
                             })
                         }}
                     /></label>
-                    <p id="registration-password-rules">{PASSWORD_REQUIREMENTS}</p>
+
                     <label>Confirm password<PasswordInput
                         autoComplete="new-password"
                         required

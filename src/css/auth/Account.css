@@ -110,3 +110,65 @@
 .account-card dd {
     margin: 0;
 }
+
+.password-field {
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+.password-feedback {
+    display: block;
+    margin-top: 10px;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 400;
+    line-height: 1.5;
+    --strength-color: #94a3b8;
+}
+
+.password-feedback--1 { --strength-color: #b91c1c; }
+.password-feedback--2 { --strength-color: #b45309; }
+.password-feedback--3 { --strength-color: #0369a1; }
+.password-feedback--4 { --strength-color: #15803d; }
+
+.password-strength-label { display: block; }
+.password-strength-label strong { color: var(--strength-color); }
+
+.password-strength-track {
+    display: block;
+    height: 6px;
+    margin: 6px 0 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e2e8f0;
+}
+
+.password-strength-fill {
+    display: block;
+    height: 100%;
+    background: var(--strength-color);
+}
+
+.password-requirements { display: flex; flex-wrap: wrap; gap: 6px; }
+.password-requirement {
+    display: inline-block;
+    padding: 3px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #f8fafc;
+}
+.password-requirement.is-met {
+    color: #166534;
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+.password-rule-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}

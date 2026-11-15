@@ -90,10 +90,19 @@ export async function authorizeAccountChange(path, token, body, submit) {
 
 export const PASSWORD_REQUIREMENTS = 'Use at least 12 characters with an uppercase letter, a lowercase letter, a number, and a symbol (maximum 72 UTF-8 bytes).'
 
+export function passwordRequirements(password) {
+    const value = typeof password === 'string' ? password : ''
+    return [
+        { label: 'At least 12 characters', met: Array.from(value).length >= 12 },
+        { label: 'An uppercase letter (A–Z)', met: /[A-Z]/.test(value) },
+        { label: 'A lowercase letter (a–z)', met: /[a-z]/.test(value) },
+        { label: 'A number (0–9)', met: /[0-9]/.test(value) },
+        { label: 'A symbol (for example !, @, #)', met: /[^\p{L}\p{N}\s]/u.test(value) && !value.includes('\0') },
+        { label: 'No more than 72 UTF-8 bytes', met: value.length > 0 && new TextEncoder().encode(value).length <= 72 }
+    ]
+}
+
 export function passwordError(password) {
-    if (typeof password !== 'string' || Array.from(password).length < 12
-        || new TextEncoder().encode(password).length > 72 || password.includes('\0')
-        || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)
-        || !/[^\p{L}\p{N}\s]/u.test(password)) return PASSWORD_REQUIREMENTS
+    if (typeof password !== 'string' || !passwordRequirements(password).every(rule => rule.met)) return PASSWORD_REQUIREMENTS
     return ''
 }

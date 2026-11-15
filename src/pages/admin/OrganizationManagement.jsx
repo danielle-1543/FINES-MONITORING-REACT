@@ -1,5 +1,5 @@
 import { apiRequest } from '../../utils/apiRequest'
-import { PASSWORD_REQUIREMENTS, passwordError } from '../../utils/emailOtp'
+import { passwordError } from '../../utils/emailOtp'
 import { useEffect, useRef, useState } from 'react'
 import PasswordInput from '../../components/PasswordInput'
 import { downloadExcel } from '../../utils/exportExcel'
@@ -135,10 +135,10 @@ function OrganizationForm({
                     autoComplete="new-password"
                     required
                     minLength={12}
-                    aria-describedby="organization-password-rules"
+                    showStrength
                     maxLength={72}
                     {...field('password')}
-                /></label><p id="organization-password-rules">{PASSWORD_REQUIREMENTS}</p></>}
+                /></label></>}
             </fieldset>
             <fieldset disabled={busy}>
                 <legend>Student access</legend>
