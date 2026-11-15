@@ -1,6 +1,7 @@
 import { apiRequest } from '../utils/apiRequest'
 import { useEffect, useRef, useState } from 'react'
 import PasswordInput from './PasswordInput'
+import { passwordError } from '../utils/emailOtp'
 function request(path, token, body, signal) {
     return apiRequest(`/api/account${path}`, token, body || undefined, signal, {
         failureMessage: 'Unable to load account.'
@@ -51,6 +52,11 @@ function SettingsModal({
         event.preventDefault()
         if (lock.current) {
             return
+        }
+        if (kind === 'password') {
+            const problem = passwordError(form.password)
+            if (problem) { setError(problem); return }
+            if (form.password !== form.password_confirmation) { setError('Passwords do not match.'); return }
         }
         lock.current = true
         setBusy(true)
@@ -127,13 +133,14 @@ function SettingsModal({
             /></label>
             {kind === 'password' && <><label>New password<PasswordInput
                 required
-                minLength={8}
+                minLength={12}
+                showStrength
                 maxLength={72}
                 autoComplete="new-password"
                 {...field('password')}
             /></label><label>Confirm new password<PasswordInput
                 required
-                minLength={8}
+                minLength={12}
                 maxLength={72}
                 autoComplete="new-password"
                 {...field('password_confirmation')}

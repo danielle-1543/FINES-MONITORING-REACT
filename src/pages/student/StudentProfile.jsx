@@ -1,4 +1,5 @@
 import PasswordInput from '../../components/PasswordInput'
+import { passwordError } from '../../utils/emailOtp'
 import { useEffect, useRef, useState } from 'react'
 import { studentRequest } from './studentApi'
 function ProfileModal({
@@ -100,6 +101,10 @@ export default function StudentProfile({
         event.preventDefault()
         if (lock.current) {
             return
+        }
+        if (changePassword) {
+            const problem = passwordError(password.password)
+            if (problem) { setError(problem); return }
         }
         if (changePassword && password.password !== password.password_confirmation) {
             setError('Passwords do not match.')
@@ -267,7 +272,8 @@ export default function StudentProfile({
                     <label>New password<PasswordInput
                         autoComplete="new-password"
                         required
-                        minLength={8}
+                        minLength={12}
+                        showStrength
                         maxLength={72}
                         disabled={busy}
                         value={password.password}
@@ -281,7 +287,7 @@ export default function StudentProfile({
                     <label>Confirm new password<PasswordInput
                         autoComplete="new-password"
                         required
-                        minLength={8}
+                        minLength={12}
                         maxLength={72}
                         disabled={busy}
                         value={password.password_confirmation}
