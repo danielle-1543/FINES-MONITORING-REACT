@@ -1346,9 +1346,18 @@ dialog.sm-profile-modal .sm-profile-footer > :last-child {
 .org-filter-buttons,
 .org-shell .org-record-filter-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 8px;
+}
+.org-shell .org-filter-toolbar > :is(.org-filter-buttons, .org-record-filter-actions) {
+    flex: 1 0 100%;
+    min-width: 0;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+.org-shell .org-filter-toolbar :is(.org-filter-buttons, .org-record-filter-actions) > :is(button, div) {
+    flex: 0 0 auto;
 }
 .org-shell .org-filter-toolbar button {
     min-height: 38px;

@@ -893,6 +893,7 @@ function Records({
     const [loading, setLoading] = useState(true)
     const [page, setPage] = useState(1)
     const [pagination, setPagination] = useState(null)
+    const [refreshVersion, setRefreshVersion] = useState(0)
     useEffect(() => {
         const controller = new AbortController()
         api(`records?${query}&page=${page}`, accessToken, undefined, controller.signal).then(result => {
@@ -910,7 +911,7 @@ function Records({
         return () => {
             return controller.abort()
         }
-    }, [query, page, accessToken])
+    }, [query, page, accessToken, refreshVersion])
     return <section className="org-panel">
         <h2>{kind === 'ATTENDANCE' ? 'Attendance' : 'Violations'}</h2>
         <div className="org-record-filters org-filter-toolbar" role="group" aria-label="Search and filter records">
@@ -934,7 +935,7 @@ function Records({
             </label>)}
             <RecordSorting filters={filters} onChange={changes => { setFilters(current => ({ ...current, ...changes })); setPage(1); setLoading(true); setError('') }} />
             <div className="org-record-filter-actions">
-                <button type="button" className="secondary" onClick={() => { setFilters({ search: '', section: '', year_level: '', attendance_status: '' }); setEventId(''); setPage(1); setLoading(true); setError('') }}>Clear filters</button>
+                <button type="button" className="secondary" onClick={() => { setFilters({ search: '', section: '', year_level: '', attendance_status: '' }); setEventId(''); setPage(1); setLoading(true); setError(''); setRefreshVersion(value => value + 1) }}>Clear filters</button>
                 <DownloadExcel path={`records/export?${query}`} accessToken={accessToken} filename={kind === 'ATTENDANCE' ? 'attendance-records.xlsx' : 'violation-records.xlsx'} />
             </div>
         </div>
