@@ -1,10 +1,17 @@
 import { apiFetch } from '../../utils/apiFetch'
+import { otpRequest, withEmailOtp } from '../../utils/emailOtp'
 import { confirmSensitive } from '../../utils/confirmation'
 import PasswordInput from '../../components/PasswordInput'
 import { useEffect, useRef, useState } from 'react'
 import { trackEvent } from '../../config/posthog'
 import '../../css/auth/Account.css'
 async function request(path, body) {
+    if (path === 'complete' && !body.challenge_id) {
+        return withEmailOtp({
+            request: () => otpRequest('/api/auth/otp/request', { ...body, purpose: 'signup' }),
+            verify: otp => request(path, { ...body, ...otp })
+        })
+    }
     await confirmSensitive(path, body)
     const response = await apiFetch(`/api/student/activation/${path}`, {
         method: 'POST',

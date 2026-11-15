@@ -1,4 +1,6 @@
 import { apiFetch } from '../../utils/apiFetch'
+import { otpRequest, withEmailOtp } from '../../utils/emailOtp'
+import ForgotPassword from '../../components/ForgotPassword'
 
 import PasswordInput from '../../components/PasswordInput'
 import { useState } from 'react'
@@ -16,6 +18,7 @@ function Login({
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [forgot, setForgot] = useState(false)
 
     async function handleSubmit(event) {
         event.preventDefault()
@@ -51,7 +54,15 @@ function Login({
                 )
             }
 
-            const data = await response.json()
+            let data = await response.json()
+            if (data.verification_required) {
+                await withEmailOtp({
+                    challenge: data,
+                    request: () => otpRequest('/api/auth/login', { identifier: identifier.trim(), password }),
+                    verify: otp => otpRequest('/api/auth/otp/verify', { user_id: data.user_id, ...otp })
+                })
+                data = await otpRequest('/api/auth/login', { identifier: identifier.trim(), password })
+            }
 
             if (!response.ok || data.success !== true) {
                 trackEvent('login_failed', {
@@ -89,6 +100,7 @@ function Login({
         }
     }
 
+    if (forgot) return <ForgotPassword onBack={() => setForgot(false)} />
     return (
         <main className="account-page login-page">
             <section className="account-card">
@@ -145,6 +157,7 @@ function Login({
                 </form>
 
                 {error && <p role="alert">{error}</p>}
+                <button type="button" className="account-link" disabled={loading} onClick={() => setForgot(true)}>Forgot password?</button>
 
                 <p className="account-back-link">
                     Not activated yet?{' '}
