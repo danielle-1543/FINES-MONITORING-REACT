@@ -1,4 +1,5 @@
 import { apiRequest } from '../../utils/apiRequest'
+import { PASSWORD_REQUIREMENTS, passwordError } from '../../utils/emailOtp'
 import { useEffect, useRef, useState } from 'react'
 import PasswordInput from '../../components/PasswordInput'
 import { downloadExcel } from '../../utils/exportExcel'
@@ -61,6 +62,10 @@ function OrganizationForm({
     }
     async function submit(event) {
         event.preventDefault()
+        if (!editing) {
+            const problem = passwordError(form.password)
+            if (problem) { setError(problem); return }
+        }
         if (lock.current) {
             return
         }
@@ -126,13 +131,14 @@ function OrganizationForm({
                         {...field('email')}
                     /></label>
                 </div>
-                {!editing && <label>Initial password<PasswordInput
+                {!editing && <><label>Initial password<PasswordInput
                     autoComplete="new-password"
                     required
-                    minLength={8}
+                    minLength={12}
+                    aria-describedby="organization-password-rules"
                     maxLength={72}
                     {...field('password')}
-                /></label>}
+                /></label><p id="organization-password-rules">{PASSWORD_REQUIREMENTS}</p></>}
             </fieldset>
             <fieldset disabled={busy}>
                 <legend>Student access</legend>

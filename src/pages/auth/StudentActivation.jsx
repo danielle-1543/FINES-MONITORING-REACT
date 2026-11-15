@@ -1,5 +1,5 @@
 import { apiFetch } from '../../utils/apiFetch'
-import { otpRequest, withEmailOtp } from '../../utils/emailOtp'
+import { otpRequest, withEmailOtp, PASSWORD_REQUIREMENTS, passwordError } from '../../utils/emailOtp'
 import { confirmSensitive } from '../../utils/confirmation'
 import PasswordInput from '../../components/PasswordInput'
 import { useEffect, useRef, useState } from 'react'
@@ -204,6 +204,8 @@ export default function StudentActivation({
         if (lock.current) {
             return
         }
+        const problem = passwordError(form.password)
+        if (problem) { setError(problem); return }
         if (form.password !== form.password_confirmation) {
             setError('Passwords do not match.')
             return
@@ -352,7 +354,8 @@ export default function StudentActivation({
                     <label>Password<PasswordInput
                         autoComplete="new-password"
                         required
-                        minLength={8}
+                        minLength={12}
+                        aria-describedby="registration-password-rules"
                         maxLength={72}
                         disabled={busy}
                         value={form.password}
@@ -363,10 +366,11 @@ export default function StudentActivation({
                             })
                         }}
                     /></label>
+                    <p id="registration-password-rules">{PASSWORD_REQUIREMENTS}</p>
                     <label>Confirm password<PasswordInput
                         autoComplete="new-password"
                         required
-                        minLength={8}
+                        minLength={12}
                         maxLength={72}
                         disabled={busy}
                         value={form.password_confirmation}

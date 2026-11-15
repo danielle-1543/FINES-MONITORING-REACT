@@ -87,3 +87,13 @@ export async function authorizeAccountChange(path, token, body, submit) {
         verify: otp => submit({ ...body, ...otp })
     })
 }
+
+export const PASSWORD_REQUIREMENTS = 'Use at least 12 characters with an uppercase letter, a lowercase letter, a number, and a symbol (maximum 72 UTF-8 bytes).'
+
+export function passwordError(password) {
+    if (typeof password !== 'string' || Array.from(password).length < 12
+        || new TextEncoder().encode(password).length > 72 || password.includes('\0')
+        || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)
+        || !/[^\p{L}\p{N}\s]/u.test(password)) return PASSWORD_REQUIREMENTS
+    return ''
+}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import PasswordInput from './PasswordInput'
-import { otpRequest, withEmailOtp } from '../utils/emailOtp'
+import { otpRequest, withEmailOtp, PASSWORD_REQUIREMENTS, passwordError } from '../utils/emailOtp'
 
 export default function ForgotPassword({ onBack }) {
     const [email, setEmail] = useState('')
@@ -13,6 +13,8 @@ export default function ForgotPassword({ onBack }) {
         event.preventDefault()
         if (busy) return
         setError(''); setNotice('')
+        const problem = passwordError(password)
+        if (problem) { setError(problem); return }
         if (password !== confirmation) { setError('Passwords do not match.'); return }
         setBusy(true)
         try {
@@ -32,8 +34,9 @@ export default function ForgotPassword({ onBack }) {
         {notice && <p role="status">{notice}</p>}
         <form onSubmit={submit}>
             <label>Email<input type="email" required maxLength={150} autoComplete="email" value={email} disabled={busy} onChange={event => setEmail(event.target.value)} /></label>
-            <label>New password<PasswordInput required minLength={8} maxLength={72} autoComplete="new-password" value={password} disabled={busy} onChange={event => setPassword(event.target.value)} /></label>
-            <label>Confirm new password<PasswordInput required minLength={8} maxLength={72} autoComplete="new-password" value={confirmation} disabled={busy} onChange={event => setConfirmation(event.target.value)} /></label>
+            <label>New password<PasswordInput required minLength={12} maxLength={72} aria-describedby="reset-password-rules" autoComplete="new-password" value={password} disabled={busy} onChange={event => setPassword(event.target.value)} /></label>
+            <p id="reset-password-rules">{PASSWORD_REQUIREMENTS}</p>
+            <label>Confirm new password<PasswordInput required minLength={12} maxLength={72} autoComplete="new-password" value={confirmation} disabled={busy} onChange={event => setConfirmation(event.target.value)} /></label>
             <button disabled={busy}>{busy ? 'Verifying…' : 'Send verification code'}</button>
         </form>
         <button type="button" disabled={busy} onClick={onBack}>Back to login</button>
