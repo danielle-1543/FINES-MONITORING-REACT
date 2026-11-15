@@ -48,6 +48,8 @@ export default function PortalLayout({
     pageDescription,
     children
 }) {
+    const roleLabel = { ADMIN: 'Administrator', ORGANIZATION: 'Organization', STUDENT: 'Student' }[role.toUpperCase()] || role
+    const accountName = account || roleLabel
     const [open, setOpen] = useState(() => {
         return !window.matchMedia('(max-width: 800px)').matches
     })
@@ -117,12 +119,12 @@ export default function PortalLayout({
                     width="38"
                     height="38"
                 />
-                <strong>MINSU-MCCS</strong>
+                <strong>MINSU-FINES MONITORING</strong>
             </div>
-            {role.toUpperCase() === 'ADMIN' && <section className="portal-profile" aria-label="Administrator account">
-                <span className="portal-avatar">{account?.slice(0, 2).toUpperCase()}</span>
-                <div><strong>{account}</strong><small>Administrator</small></div>
-            </section>}
+            <section className="portal-profile" aria-label={`${roleLabel} account`}>
+                <span className="portal-avatar" aria-hidden="true">{accountName.slice(0, 2).toUpperCase()}</span>
+                <div><strong>{accountName}</strong><small>{roleLabel}</small></div>
+            </section>
             <nav aria-label={`${role} navigation`}>
                 <ul>{items.map(([key, label]) => {
                     return <li key={key}>
@@ -180,7 +182,7 @@ export default function PortalLayout({
                     <Icon name="menu" />
                 </button>
                 <div className="portal-page-title">
-                    <span className="portal-breadcrumb">MINSU-MCCS <span aria-hidden="true">/</span></span>
+                    <span className="portal-breadcrumb">MINSU-FINES MONITORING <span aria-hidden="true">/</span></span>
                     <h1>{items.find(([key]) => {
                         return key === page
                     })?.[1] || 'Dashboard'}</h1>

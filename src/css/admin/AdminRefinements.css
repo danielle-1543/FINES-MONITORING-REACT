@@ -33,7 +33,7 @@
 .admin-portal .portal-today { margin-left: auto; flex-shrink: 0; font-size: 12px; }
 .admin-portal .portal-sidebar { width: 256px; flex-basis: 256px; padding: 24px 16px 16px; }
 .admin-portal .portal-brand { margin: 0 0 16px; padding: 0 8px 20px; gap: 12px; }
-.admin-portal .portal-brand strong { white-space: nowrap; font-size: 15px; }
+.admin-portal .portal-brand strong { white-space: normal; font-size: 15px; }
 .admin-portal .portal-brand img { flex: 0 0 38px; object-fit: contain; }
 .admin-portal .portal-profile { margin: 0 0 16px; padding: 12px; gap: 12px; border-radius: 8px; }
 .admin-portal .portal-profile > div { min-width: 0; }
