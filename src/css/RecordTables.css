@@ -407,3 +407,114 @@
     #root .org-shell :is(.org-record-filters, .org-event-record-filters) .record-sort-field { max-width: none; }
     #root .org-shell :is(.org-record-filters, .org-event-record-filters) .org-record-filter-actions { justify-self: stretch; justify-content: flex-start; }
 }
+
+/* Student notification inbox: readable messages and compact institutional styling. */
+#root .notification-inbox {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 16px 0;
+    padding: 0;
+    border: 1px solid var(--table-line);
+    border-radius: 10px;
+    background: white;
+    box-shadow: none;
+    overflow: hidden;
+}
+#root .notification-inbox-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+}
+#root .notification-inbox-header h2 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--forest);
+}
+#root .notification-inbox-header h2 span {
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: #edf3e9;
+    color: #3b5832;
+    font-size: .73rem;
+    font-weight: 600;
+}
+#root .notification-inbox-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+#root .notification-inbox-actions button {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: .75rem;
+}
+#root .notification-inbox-filters {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    padding: 0 16px 12px;
+    border-bottom: 1px solid var(--table-line);
+}
+#root .notification-inbox-filters button {
+    border: 1px solid var(--table-line);
+    background: white;
+    color: var(--forest);
+    box-shadow: none;
+}
+#root .notification-inbox-filters button[aria-pressed=true] {
+    background: var(--forest);
+    border-color: var(--forest);
+    color: white;
+}
+#root .notification-inbox-list { list-style: none; margin: 0; padding: 0; }
+#root .notification-inbox-list > li { margin: 0; padding: 0; border: 0; }
+#root .notification-inbox-row {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    padding: 16px;
+    background: white;
+    border-bottom: 1px solid var(--table-line);
+}
+#root .notification-inbox-row.is-unread { background: #f3f7ef; }
+#root .notification-inbox-title h3 { color: var(--forest); line-height: 1.5; margin: 0; }
+#root .notification-inbox-description {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    color: #53604e;
+    margin: 5px 0 8px;
+    line-height: 1.6;
+}
+#root .notification-inbox-meta { gap: 6px 12px; }
+#root .notification-inbox-meta span { white-space: normal; overflow-wrap: anywhere; }
+#root .notification-inbox-meta time { display: block; width: 100%; color: var(--table-muted); }
+#root .notification-unread-dot { background: #426b30; flex-shrink: 0; }
+#root .notification-inbox .notification-mark-read {
+    color: var(--forest);
+    border: 1px solid #d6dfd2;
+    background: white;
+    min-height: 34px;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: .73rem;
+    box-shadow: none;
+}
+#root .notification-inbox-pagination { padding: 12px 16px; }
+@media (max-width: 600px) {
+    #root .notification-inbox-header { align-items: flex-start; }
+    #root .notification-inbox-actions { width: 100%; }
+    #root .notification-inbox-actions button { flex: 1; min-height: 44px; }
+    #root .notification-inbox-row { grid-template-columns: 28px minmax(0, 1fr); gap: 10px; padding: 14px; }
+    #root .notification-inbox .notification-mark-read { grid-column: 2; justify-self: start; min-height: 44px; }
+    #root .notification-inbox-filters button { min-height: 44px; }
+}

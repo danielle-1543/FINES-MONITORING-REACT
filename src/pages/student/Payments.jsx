@@ -263,7 +263,7 @@ export default function Payments({
             accessToken={accessToken}
             onChanged={onChanged}
         />}
-        {!organization && <StudentPaymentWorkspace data={data} busy={busy} requestError={error} accessToken={accessToken}
+        {!organization && <StudentPaymentWorkspace key={data.current_academic_period_id || 'no-current-semester'} data={data} busy={busy} requestError={error}
             onManualPayment={body => action('student/payments/submit', body)}
             onXendit={(id, selection) => xenditCheckout(id, null, false, selection)} />}
         <section className="student-panel">

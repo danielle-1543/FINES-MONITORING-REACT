@@ -1,5 +1,4 @@
 import RecordStatus from './RecordStatus'
-import AcademicPeriodSelect from './AcademicPeriodSelect'
 import { useEffect, useRef, useState } from 'react'
 import { money, date } from '../utils/format'
 import { paymentOrganizations, paymentBlockReason, paymentPage } from '../utils/studentPayments'
@@ -12,11 +11,10 @@ function Pages({ result, onChange, label }) {
     </nav>
 }
 
-export default function StudentPaymentWorkspace({ data, busy, onManualPayment, onXendit, requestError, accessToken }) {
-    const [period, setPeriod] = useState(() => String(data.current_academic_period_id || 0))
+export default function StudentPaymentWorkspace({ data, busy, onManualPayment, onXendit, requestError }) {
+    const period = data.current_academic_period_id ? String(data.current_academic_period_id) : ''
     const [amount, setAmount] = useState('')
-    const groups = paymentOrganizations(data, period)
-    const previousBalance = paymentOrganizations(data).reduce((sum, group) => sum + group.outstanding, 0) - groups.reduce((sum, group) => sum + group.outstanding, 0)
+    const groups = period ? paymentOrganizations(data, period) : []
     const [fineOrg, setFineOrg] = useState('')
     const [finePages, setFinePages] = useState({})
     const [fineStatus, setFineStatus] = useState('ALL')
@@ -53,7 +51,7 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
     }
     async function submit(event) {
         event.preventDefault()
-        if (!selected || blocked || !method || busy) return
+        if (!period || !selected || blocked || !method || busy) return
         setError('')
         if (method === 'XENDIT_TEST') {
             await onXendit(selected.id, { academic_period_id: Number(period), amount })
@@ -74,9 +72,10 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
             setReference('')
         }
     }
+    if (!period) {
+        return <p role="status">Payments will be available when the administrator sets the current academic semester.</p>
+    }
     return <>
-        <AcademicPeriodSelect accessToken={accessToken} value={period} onChange={value => { setPeriod(value); setPayOrg(''); setFinePages({}); setSchedulePage(1) }} includeLegacy />
-        <p>Amounts below belong to the selected semester. Other semesters still unpaid: <b>{money(Math.max(0, previousBalance) / 100)}</b>. <a href="#archives">Open current-semester Fine Archives</a></p>
         <div className="payment-org-cards">
             <article className="payment-org-card payment-combined-card">
                 <span>Total fines · All organizations</span>
@@ -147,7 +146,7 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
         {selected && <section className="student-panel payment-checkout" tabIndex={-1} ref={checkout} aria-label={`Pay fines to ${selected.name}`}>
             <div className="payment-section-heading"><h3>Pay fines · {selected.name}</h3>
                 <button type="button" disabled={busy} onClick={() => setPayOrg('')}>Close payment form</button></div>
-            <p>Pay all or part of this organization’s available balance in the selected semester. Confirmed payments are allocated to the oldest unpaid fines first.</p>
+            <p>Payments apply to this organization’s available balance in the current semester. Confirmed payments are allocated to the oldest unpaid fines first.</p>
             {blocked && <p role="alert" className="payment-state-note">{blocked}</p>}
             {error && <p role="alert" className="account-error">{error}</p>}
             {requestError && <p role="alert" className="account-error">{requestError}</p>}
