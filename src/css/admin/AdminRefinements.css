@@ -184,3 +184,6 @@
     .admin-portal :is(.sm-pagination, .payment-pagination) { align-items: flex-start; }
     .admin-portal :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { font-size: 16px; }
 }
+
+.admin-portal .academic-snapshot-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+.admin-portal .academic-snapshot-actions .academic-delete-export { background:#fff; border:1px solid #e2bcbc; color:#a33232; }

@@ -714,7 +714,7 @@ function EventScanner({
                     setLoading(true)
                 }}>
                     <option value="">All year levels</option>
-                    {['1st Year', '2nd Year', '3rd Year', '4th Year'].map(year => <option key={year}>{year}</option>)}
+                    {['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduating'].map(year => <option key={year}>{year}</option>)}
                 </select> : <input value={recordFilters[field]} maxLength={100}
                     placeholder={field === 'student_number' ? 'Search student number' : 'e.g. F1'}
                     onChange={e => {
@@ -930,7 +930,7 @@ function Records({
                     onChange={event => { setFilters(current => ({ ...current, [field]: event.target.value })); setPage(1); setLoading(true); setError('') }} />
                     : <select value={filters[field]} onChange={event => { setFilters(current => ({ ...current, [field]: event.target.value })); setPage(1); setLoading(true); setError('') }}>
                         <option value="">{field === 'year_level' ? 'All year levels' : 'All statuses'}</option>
-                        {(field === 'year_level' ? ['1st Year', '2nd Year', '3rd Year', '4th Year'] : ['PRESENT', 'ABSENT']).map(value => <option key={value}>{value}</option>)}
+                        {(field === 'year_level' ? ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduating'] : ['PRESENT', 'ABSENT']).map(value => <option key={value}>{value}</option>)}
                     </select>}
             </label>)}
             <RecordSorting filters={filters} onChange={changes => { setFilters(current => ({ ...current, ...changes })); setPage(1); setLoading(true); setError('') }} />
@@ -1070,7 +1070,7 @@ function StudentRecords({ accessToken, scope }) {
             <label className="org-field">Year level
                 <select value={filters.year_level} onChange={event => updateFilters({ year_level: event.target.value })}>
                     <option value="">All years</option>
-                    {['1st Year', '2nd Year', '3rd Year', '4th Year'].map(year => <option key={year}>{year}</option>)}
+                    {['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduating'].map(year => <option key={year}>{year}</option>)}
                 </select>
             </label>
             <label className="org-field">Section
