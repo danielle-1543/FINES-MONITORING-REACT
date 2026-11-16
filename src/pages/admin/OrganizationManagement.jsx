@@ -203,6 +203,8 @@ export default function OrganizationManagement({
         [notice, setNotice] = useState('')
     const [exporting, setExporting] = useState(false),
         [loading, setLoading] = useState(true)
+    const [deleting, setDeleting] = useState(null)
+    const deleteLock = useRef(false)
     const query = new URLSearchParams(filters).toString()
     useEffect(() => {
         const controller = new AbortController()
@@ -236,6 +238,18 @@ export default function OrganizationManagement({
         })
         setLoading(true)
     }
+    async function deleteOrganization(org) {
+        if (deleteLock.current) return
+        deleteLock.current = true
+        setDeleting(org.id); setError(''); setNotice('')
+        try {
+            const response = await request('/delete', accessToken, { id: org.id, organization_name: org.organization_name, confirmed: true })
+            setNotice(response.message)
+            setLoading(true)
+            setVersion(current => current + 1)
+        } catch (reason) { setError(reason.message) }
+        finally { deleteLock.current = false; setDeleting(null) }
+    }
     async function exportExcel() {
         setExporting(true)
         try {
@@ -258,7 +272,7 @@ export default function OrganizationManagement({
                     setModal(blank)
                     setNotice('')
                 }}
-                disabled={!result}
+                disabled={!result || deleting !== null}
             >New Organization</button>
         </header>
         {error && <p
@@ -399,6 +413,8 @@ export default function OrganizationManagement({
                                         setNotice('')
                                     }}
                                 >Edit</button>
+                                <button type="button" className="sm-btn org-delete-account" disabled={deleting !== null}
+                                    onClick={() => deleteOrganization(org)}>{deleting === org.id ? 'Deleting…' : 'Delete'}</button>
                             </td>
                         </tr>
                     })}</tbody>

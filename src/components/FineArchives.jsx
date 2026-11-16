@@ -24,6 +24,15 @@ export default function FineArchives({ accessToken, role = 'STUDENT', summaryOnl
         return () => controller.abort()
     }, [query, accessToken])
     function choose(value) { setPeriod(value); setPage(1); setPaymentPage(1); setSummaryPage(1) }
+    async function exportSemesterSummary(row) {
+        setExporting(true); setError('')
+        try {
+            const selection = new URLSearchParams({ academic_period_id: row.academic_period_id, org_user_id: row.org_user_id, search })
+            const response = await apiRequest(`/api/fine-archives/semester-export?${selection}`, accessToken)
+            const label = row.academic_period_label.replace(/[^a-z0-9]+/gi, '-')
+            downloadExcel(response.data, `student-fines-${row.org_user_id}-${label}.xlsx`)
+        } catch (reason) { setError(reason.message) } finally { setExporting(false) }
+    }
     async function exportRecords(payments = false) {
         setExporting(true); setError('')
         try {
@@ -48,7 +57,7 @@ export default function FineArchives({ accessToken, role = 'STUDENT', summaryOnl
         {error && <p role="alert">{error}</p>}
         <div className="student-table fine-summary-table"><table className="system-table"><thead><tr><th>Academic semester</th><th>Organization</th><th>Fines</th><th className="table-number">Original</th><th className="table-number">After cap/discounts</th><th className="table-number">Paid</th><th className="table-number">Pending</th><th className="table-number">Remaining</th></tr></thead>
             <tbody>{summaryPagination.rows.map(row => <tr key={`${row.academic_period_id}:${row.org_user_id}`}>
-                <td><button onClick={() => choose(String(row.academic_period_id))}>{row.academic_period_label}</button></td><td>{row.organization_name}</td><td>{row.count}</td>
+                <td><button disabled={exporting} title="Export one row per student for this academic year and semester" aria-label={`Export student fines: ${row.organization_name}, ${row.academic_period_label}`} onClick={() => exportSemesterSummary(row)}>{row.academic_period_label}</button></td><td>{row.organization_name}</td><td>{row.count}</td>
                 {['original', 'adjusted', 'paid', 'pending', 'outstanding'].map(key => <td key={key}>{money(row[key])}</td>)}
             </tr>)}</tbody></table></div>
         {summaryPagination.pages > 1 && <nav className="payment-pagination" aria-label="Semester summary pages">

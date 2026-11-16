@@ -72,7 +72,12 @@ export async function confirmSensitive(path, body) {
     if (action === 'complete') message = 'Activate this student account with the details shown?'
     if (action === 'cancel') message = `Cancel payment claim ${subject}? It will no longer be submitted for verification.`
     if (action === 'periods') message = `Save the payment schedule for ${values.label || subject}? These dates determine when students can submit payments.`
-    if (!await askConfirmation({ message })) {
+    const deletingOrganization = action === 'delete' && path.split('?')[0] === '/api/admin/organizations/delete'
+    if (deletingOrganization) message = `Delete the organization account “${values.organization_name}”? It will be removed from the Organizations list and its sign-in access will be revoked.`
+    if (!await askConfirmation({ message,
+        ...(deletingOrganization ? { title: 'Delete organization account?', confirmLabel: 'Delete account',
+            note: 'Attendance, fines, payments, receipts and notifications will remain linked to this organization. Pending payment claims must be resolved first. Its historical identity, username and email are retained.' } : {})
+    })) {
         throw new Error('Action cancelled. Nothing was changed.')
     }
 }

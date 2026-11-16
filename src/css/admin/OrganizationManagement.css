@@ -117,3 +117,5 @@
     font-weight: normal;
     color: #63715e;
 }
+
+.organization-management .org-delete-account { margin-left:8px; border-color:#e2bcbc; background:#fff; color:#a33232; }
