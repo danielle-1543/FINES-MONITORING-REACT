@@ -413,7 +413,8 @@ export default function OrganizationManagement({
                                         setNotice('')
                                     }}
                                 >Edit</button>
-                                <button type="button" className="sm-btn org-delete-account" disabled={deleting !== null}
+                                <button type="button" className="sm-btn org-delete-account" disabled={deleting !== null || !result.deletion_available}
+                                    title={result.deletion_available ? undefined : 'Organization deletion is awaiting database setup'}
                                     onClick={() => deleteOrganization(org)}>{deleting === org.id ? 'Deleting…' : 'Delete'}</button>
                             </td>
                         </tr>
