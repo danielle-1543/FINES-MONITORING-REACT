@@ -19,6 +19,10 @@ Use the PostHog host for your project's region. Never put private API keys in `V
 
 Run `npm run dev`, then open `http://localhost:5174`. The fixed port matches the configured web push origin.
 
+### Camera scanning
+
+Scanners start the rear camera automatically when the scanner opens; there is no camera picker or Start/Stop button. The deployed frontend must be served over HTTPS (browsers block camera access on plain HTTP). The PHP API sends `Permissions-Policy: camera=*` because the API and frontend live on different origins.
+
 ## Checks and build
 
 - `npm run lint` checks JavaScript and React source.

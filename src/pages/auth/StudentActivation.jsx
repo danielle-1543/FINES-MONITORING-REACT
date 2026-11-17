@@ -2,8 +2,9 @@ import { apiFetch } from '../../utils/apiFetch'
 import { otpRequest, withEmailOtp, passwordError } from '../../utils/emailOtp'
 import { confirmSensitive } from '../../utils/confirmation'
 import PasswordInput from '../../components/PasswordInput'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { trackEvent } from '../../config/posthog'
+import { startQrCamera } from '../../utils/qrCamera'
 import '../../css/auth/Account.css'
 async function request(path, body) {
     if (path === 'complete' && !body.challenge_id) {
@@ -30,22 +31,6 @@ async function request(path, body) {
     }
     return result
 }
-async function release(reader, starting) {
-    if (!reader) {
-        return
-    }
-    try {
-        await starting
-    } catch {/* Failed startup still needs cleanup. */ }
-    try {
-        if (reader.isScanning) {
-            await reader.stop()
-        }
-    } catch {/* Camera may be disconnected. */ }
-    try {
-        reader.clear()
-    } catch {/* The page may have been unmounted. */ }
-}
 export default function StudentActivation({
     onBack,
     onComplete
@@ -64,79 +49,72 @@ export default function StudentActivation({
     })
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
-    const [cameraBusy, setCameraBusy] = useState(false)
-    const [running, setRunning] = useState(false)
-    const scanner = useRef(null)
-    const starting = useRef(null)
+    const [cameraStatus, setCameraStatus] = useState('')
+    const camera = useRef(null)
+    const cameraToken = useRef(0)
+    const identifyHandler = useRef(null)
     const mounted = useRef(false)
     const lock = useRef(false)
     const decoded = useRef(false)
-    useEffect(() => {
-        mounted.current = true
-        return () => {
-            mounted.current = false
-            void release(scanner.current, starting.current)
+    const stopCamera = useCallback(async () => {
+        cameraToken.current += 1
+        const handle = camera.current
+        camera.current = null
+        if (handle) {
+            await handle.stop()
+        }
+        if (mounted.current) {
+            setCameraStatus('')
         }
     }, [])
-    async function stopCamera() {
-        setCameraBusy(true)
-        await release(scanner.current, starting.current)
-        scanner.current = null
-        if (mounted.current) {
-            setRunning(false)
-            setCameraBusy(false)
-        }
-    }
-    async function startCamera() {
-        if (scanner.current || cameraBusy) {
+    const startCamera = useCallback(async () => {
+        if (!mounted.current || camera.current) {
             return
         }
-        setCameraBusy(true)
-        setError('')
+        const token = ++cameraToken.current
         decoded.current = false
+        if (mounted.current) {
+            setCameraStatus('Starting camera…')
+        }
         try {
-            const {
-                Html5Qrcode
-            } = await import('html5-qrcode')
-            if (!mounted.current) {
+            const handle = await startQrCamera({
+                containerId: 'activation-reader',
+                qrbox: { width: 230, height: 230 },
+                onScan: value => {
+                    if (decoded.current || !mounted.current) {
+                        return
+                    }
+                    if (!/^[a-f0-9]{64}$/i.test(value.trim())) {
+                        return
+                    }
+                    decoded.current = true
+                    void identifyHandler.current?.(value.trim())
+                }
+            })
+            if (token !== cameraToken.current || !mounted.current) {
+                await handle.stop()
                 return
             }
-            const reader = new Html5Qrcode('activation-reader')
-            scanner.current = reader
-            starting.current = reader.start({
-                facingMode: 'environment'
-            }, {
-                fps: 10,
-                qrbox: {
-                    width: 230,
-                    height: 230
-                }
-            }, value => {
-                if (decoded.current || !mounted.current) {
-                    return
-                }
-                if (!/^[a-f0-9]{64}$/i.test(value.trim())) {
-                    return
-                }
-                decoded.current = true
-                void identify(value.trim())
-            }, () => { })
-            await starting.current
-            if (mounted.current && !decoded.current) {
-                setRunning(true)
-            }
+            camera.current = handle
+            setCameraStatus('Camera ready. Point it at your QR code.')
         } catch (err) {
-            await release(scanner.current, starting.current)
-            scanner.current = null
-            if (mounted.current) {
-                setError(`Camera unavailable: ${err.message || err}. Allow camera access on localhost/HTTPS.`)
-            }
-        } finally {
-            if (mounted.current) {
-                setCameraBusy(false)
+            if (token === cameraToken.current && mounted.current) {
+                setCameraStatus('')
+                setError(err.message || String(err))
             }
         }
-    }
+    }, [])
+    useEffect(() => {
+        mounted.current = true
+        const timer = setTimeout(() => {
+            void startCamera()
+        }, 0)
+        return () => {
+            mounted.current = false
+            clearTimeout(timer)
+            void stopCamera()
+        }
+    }, [startCamera, stopCamera])
     async function identify(token) {
         setBusy(true)
         setError('')
@@ -154,8 +132,10 @@ export default function StudentActivation({
                 setIdentified(result.data)
             }
         } catch (err) {
+            decoded.current = false
             if (mounted.current) {
                 setError(err.message)
+                void startCamera()
             }
         } finally {
             if (mounted.current) {
@@ -245,6 +225,9 @@ export default function StudentActivation({
             }
         }
     }
+    useEffect(() => {
+        identifyHandler.current = identify
+    })
     return <main className="account-page">
         <section className="account-card">
             <h1>Student Account Activation</h1>
@@ -255,18 +238,7 @@ export default function StudentActivation({
             >{error}</p>}
             {!student ? <>
                 <h2>Scan your assigned QR code</h2>
-                <div className="account-actions">
-                    <button
-                        type="button"
-                        disabled={busy || cameraBusy || running}
-                        onClick={startCamera}
-                    >Start Camera</button>
-                    <button
-                        type="button"
-                        disabled={cameraBusy || !running}
-                        onClick={stopCamera}
-                    >Stop Camera</button>
-                </div>
+                <p role="status" aria-live="polite" className="account-camera-status">{cameraStatus}</p>
                 <div
                     id="activation-reader"
                     className="account-reader"

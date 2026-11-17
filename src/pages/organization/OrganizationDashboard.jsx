@@ -12,6 +12,7 @@ import { downloadExcel } from '../../utils/exportExcel'
 import Payments from '../student/Payments'
 import StudentRecord from './StudentRecord'
 import PortalLayout from '../../components/PortalLayout'
+import { startQrCamera } from '../../utils/qrCamera'
 function api(path, token, body, signal) {
     return apiRequest(`/api/org/${path}`, token, body, signal, {
         invalidResponseMessage: 'The API returned an invalid response.'
@@ -446,22 +447,6 @@ function RecordTable({
         </table>
     </div>
 }
-async function releaseCamera(reader, starting) {
-    if (!reader) {
-        return
-    }
-    try {
-        await starting
-    } catch {/* Startup failed; still release its canvas below. */ }
-    try {
-        if (reader.isScanning) {
-            await reader.stop()
-        }
-    } catch {/* Device may already be disconnected. */ }
-    try {
-        reader.clear()
-    } catch {/* The component may already be removed. */ }
-}
 function EventScanner({
     event = null,
     types = [],
@@ -471,10 +456,6 @@ function EventScanner({
     const [feedback, setFeedback] = useState('')
     const [confirmation, setConfirmation] = useState(null)
     const [pending, setPending] = useState(false)
-    const [cameraBusy, setCameraBusy] = useState(false)
-    const [running, setRunning] = useState(false)
-    const [cameras, setCameras] = useState([])
-    const [cameraId, setCameraId] = useState('')
     const previewHandler = useRef(null)
     const [records, setRecords] = useState([])
     const [recordFilters, setRecordFilters] = useState({ student_number: '', section: '', year_level: '', attendance_status: '' })
@@ -500,8 +481,9 @@ function EventScanner({
         ...(eventId ? { event_id: eventId } : { record_type: 'VIOLATION' }),
         ...recordFilters
     }).toString()
-    const reader = useRef(null)
-    const starting = useRef(null)
+    const camera = useRef(null)
+    const cameraToken = useRef(0)
+    const cameraMounted = useRef(false)
     const mounted = useRef(false)
     const busy = useRef(false)
     const cooldown = useRef(0)
@@ -525,11 +507,6 @@ function EventScanner({
             controller.abort()
         }
     }, [recordQuery, page, accessToken, refreshVersion])
-    useEffect(() => {
-        return () => {
-            void releaseCamera(reader.current, starting.current)
-        }
-    }, [])
     async function preview(value) {
         if (busy.current || Date.now() < cooldown.current || !mounted.current) {
             return
@@ -624,90 +601,66 @@ function EventScanner({
             cooldown.current = Date.now() + 1500
         }
     }
-    async function startCamera() {
-        if (reader.current || cameraBusy) {
+    const stopCamera = useCallback(async () => {
+        cameraToken.current += 1
+        const handle = camera.current
+        camera.current = null
+        if (handle) {
+            await handle.stop()
+        }
+    }, [])
+    const startCamera = useCallback(async () => {
+        if (!cameraMounted.current || camera.current) {
             return
         }
-        setCameraBusy(true)
+        const token = ++cameraToken.current
+        if (cameraMounted.current) {
+            setFeedback('Starting camera…')
+        }
         try {
-            const {
-                Html5Qrcode, Html5QrcodeSupportedFormats
-            } = await import('html5-qrcode')
-            if (!mounted.current) {
-                return
-            }
-            if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-                throw new Error('Camera scanning requires HTTPS and a browser with camera support.')
-            }
-            const devices = await Html5Qrcode.getCameras()
-            if (!mounted.current) return
-            setCameras(devices)
-            if (!devices.length) throw new Error('No camera was detected on this device.')
-            const scanner = new Html5Qrcode('org-qr-reader', {
-                formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-                useBarCodeDetectorIfSupported: false,
-                verbose: false
+            const handle = await startQrCamera({
+                containerId: 'org-qr-reader',
+                onScan: value => {
+                    void previewHandler.current?.(value)
+                }
             })
-            reader.current = scanner
-            starting.current = scanner.start(cameraId || { facingMode: 'environment' }, {
-                fps: 10
-            }, value => {
-                void previewHandler.current?.(value)
-            }, () => { })
-            await starting.current
-            if (!mounted.current) {
+            if (token !== cameraToken.current || !cameraMounted.current) {
+                await handle.stop()
                 return
             }
-            const video = document.querySelector('#org-qr-reader video')
-            if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
-                throw new Error('The camera opened but no video frames arrived. Stop other camera apps and select another camera.')
-            }
-            setRunning(true)
+            camera.current = handle
             setFeedback('Camera started. Point it at a student QR code.')
         } catch (error) {
-            await releaseCamera(reader.current, starting.current)
-            reader.current = null
-            if (mounted.current) {
-                setFeedback(`Camera failed: ${error.message || error}. Allow camera access on localhost or HTTPS.`)
-            }
-        } finally {
-            if (mounted.current) {
-                setCameraBusy(false)
+            if (token === cameraToken.current && cameraMounted.current) {
+                setFeedback(error.message || String(error))
             }
         }
-    }
-    async function stopCamera() {
-        setCameraBusy(true)
-        await releaseCamera(reader.current, starting.current)
-        reader.current = null
-        if (mounted.current) {
-            setRunning(false)
-            setCameraBusy(false)
-            setFeedback('Camera stopped.')
-        }
-    }
+    }, [])
     useEffect(() => {
         previewHandler.current = preview
     })
+    useEffect(() => {
+        cameraMounted.current = true
+        if (!accepting) {
+            void stopCamera()
+            return () => {
+                cameraMounted.current = false
+                void stopCamera()
+            }
+        }
+        const timer = setTimeout(() => {
+            void startCamera()
+        }, 0)
+        return () => {
+            cameraMounted.current = false
+            clearTimeout(timer)
+            void stopCamera()
+        }
+    }, [accepting, startCamera, stopCamera])
     return <>
         <section className={event ? 'attendance-scanner-controls' : 'org-panel violation-scanner-panel'}>
         {!event && <h2>Violation Scanner</h2>}
         {event ? <p>Scanning: <strong>{windowStatus(event, now)}</strong> · {pht(event.scan_starts_at)} to {pht(event.scan_ends_at)}</p> : <p>Scan a student and choose one or more violations. Available with or without an attendance event.</p>}
-        <div className="org-actions">
-            {cameras.length > 0 && <label>Camera<select value={cameraId} disabled={running || cameraBusy} onChange={event => setCameraId(event.target.value)}>
-                <option value="">Automatic rear camera</option>
-                {cameras.map((camera, index) => <option key={camera.id} value={camera.id}>{camera.label || `Camera ${index + 1}`}</option>)}
-            </select></label>}
-            <button
-                onClick={startCamera}
-                disabled={cameraBusy || running || !accepting}
-            >{cameraBusy && !running ? 'Starting Camera…' : 'Start Camera'}</button>
-            <button
-                className="secondary"
-                onClick={stopCamera}
-                disabled={cameraBusy || !running}
-            >Stop Camera</button>
-        </div>
         <div
             id="org-qr-reader"
             className="org-reader"
