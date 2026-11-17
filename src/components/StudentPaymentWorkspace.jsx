@@ -81,13 +81,14 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
                 <span>Total fines · All organizations</span>
                 <strong>{money(groups.reduce((sum, group) => sum + group.total, 0) / 100)}</strong>
                 <p>Original fine amount before cap and discounts: {money(groups.reduce((sum, group) => sum + group.originalTotal, 0) / 100)}</p>
-                <p>Remaining balance: <b>{money(groups.reduce((sum, group) => sum + group.outstanding, 0) / 100)}</b></p>
+                <p>Includes unpaid fines carried over from past semesters. Clears as payments are confirmed.</p>
+                <p>Outstanding balance (past semesters): <b>{money(groups.reduce((sum, group) => sum + group.outstanding, 0) / 100)}</b></p>
             </article>
             {groups.map(group => <article className="payment-org-card" key={group.id}>
                 <span>{group.name} · Total fines</span>
                 <strong>{money(group.total / 100)}</strong>
                 <p>Original fine amount before cap and discounts: {money(group.originalTotal / 100)}</p>
-                <p>Remaining balance: <b>{money(group.outstanding / 100)}</b> · Pending: {money(group.pending / 100)}</p>
+                <p>Outstanding balance (past semesters): <b>{money(group.outstanding / 100)}</b> · Pending: {money(group.pending / 100)}</p>
             </article>)}
         </div>
 

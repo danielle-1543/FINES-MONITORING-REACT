@@ -10,15 +10,19 @@ test('semester selection separates balances and keeps classified legacy schedule
     const legacy = { id: 1, academic_period_id: null, payment_window: 'OPEN' }
     const current = { id: 2, academic_period_id: 7, payment_window: 'OPEN' }
     const data = { organizations: [{ id: 1, schedules: [legacy, current] }], fines: [
-        fine(1, '50.00', { academic_period_id: 6, payment_period_id: 1 }),
+        fine(1, '50.00', { academic_period_id: 6, payment_period_id: 1, is_carried_balance: true }),
         fine(1, '80.00', { academic_period_id: 7, payment_period_id: 2 })
     ] }
     const [old] = paymentOrganizations(data, '6'), [now] = paymentOrganizations(data, '7')
+    assert.equal(old.total, 5000)
     assert.equal(old.outstanding, 5000)
-    assert.equal(now.outstanding, 8000)
+    assert.equal(now.total, 8000)
+    assert.equal(now.outstanding, 0)
     assert.deepEqual(old.schedules, [legacy])
     assert.deepEqual(now.schedules, [current])
-    assert.equal(paymentOrganizations(data)[0].outstanding, 13000)
+    const [all] = paymentOrganizations(data)
+    assert.equal(all.total, 13000)
+    assert.equal(all.outstanding, 5000)
 })
 
 test('organization and combined totals are independent of filters and pagination', () => {
@@ -39,16 +43,16 @@ test('pending claims block only their organization, even when their fine is not 
     assert.equal(paymentBlockReason(groups[1], schedule), '')
 })
 
-test('headline total uses the capped amount and retains the original amount after payment', () => {
+test('total fines clears after payment while the original amount is retained', () => {
     const data = { organizations: [{ id: 1, schedules: [schedule] }], claims: [],
         fines: [fine(1, '500.00', { payable_amount: '300.00', cap_adjustment: '200.00', outstanding: '300.00', available_to_claim: '300.00' })] }
     let [group] = paymentOrganizations(data)
     assert.equal(group.total, 30000)
     assert.equal(group.originalTotal, 50000)
-    assert.equal(group.outstanding, 30000)
+    assert.equal(group.outstanding, 0)
     data.fines[0] = { ...data.fines[0], paid_amount: '300.00', outstanding: '0.00', available_to_claim: '0.00', payment_status: 'PAID' }
     ;[group] = paymentOrganizations(data)
-    assert.equal(group.total, 30000)
+    assert.equal(group.total, 0)
     assert.equal(group.originalTotal, 50000)
     assert.equal(group.outstanding, 0)
     assert.equal(group.payable, 0)
