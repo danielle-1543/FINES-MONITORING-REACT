@@ -30,6 +30,12 @@ function waitForVideoElement(video) {
         const startedAt = Date.now()
         let timer
         const check = () => {
+            if (video.paused) {
+                try {
+                    const playing = video.play()
+                    if (playing?.catch) playing.catch(() => { })
+                } catch { /* Retry on the next poll. */ }
+            }
             if (video.videoWidth > 0 && video.videoHeight > 0) {
                 clearTimeout(timer)
                 resolve(video)
