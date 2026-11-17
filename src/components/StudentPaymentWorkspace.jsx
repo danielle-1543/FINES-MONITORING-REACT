@@ -88,7 +88,6 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
                 <strong>{money(group.total / 100)}</strong>
                 <p>Original fine amount before cap and discounts: {money(group.originalTotal / 100)}</p>
                 <p>Remaining balance: <b>{money(group.outstanding / 100)}</b> · Pending: {money(group.pending / 100)}</p>
-                <button type="button" onClick={() => setFineOrg(group.id)}>View fines</button>
             </article>)}
         </div>
 
