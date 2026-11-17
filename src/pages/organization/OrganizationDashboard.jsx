@@ -1148,17 +1148,19 @@ export default function OrganizationDashboard({
     const [selectedEvent, setSelectedEvent] = useState('')
     const saveLock = useRef(false)
     const now = useNow()
+    const [loadError, setLoadError] = useState('')
     const load = useCallback(async signal => {
         const result = await api('events', accessToken, undefined, signal)
         if (signal?.aborted) return
         setData(result.data)
+        setLoadError('')
         setSelectedEvent(previous => result.data.events.some(event => String(event.id) === previous) ? previous : '')
     }, [accessToken])
     useEffect(() => {
         const controller = new AbortController()
         const refresh = () => {
             load(controller.signal).catch(error => {
-                if (error.name !== 'AbortError') setError(error.message)
+                if (error.name !== 'AbortError') setLoadError(error.message)
             })
         }
         const timer = setInterval(refresh, 15000)
@@ -1172,10 +1174,12 @@ export default function OrganizationDashboard({
     useEffect(() => {
         const controller = new AbortController()
         api('events', accessToken, undefined, controller.signal).then(result => {
-            return setData(result.data)
+            if (controller.signal.aborted) return
+            setData(result.data)
+            setLoadError('')
         }).catch(err => {
             if (err.name !== 'AbortError') {
-                setError(err.message)
+                setLoadError(err.message)
             }
         }).finally(() => {
             if (!controller.signal.aborted) {
@@ -1226,6 +1230,7 @@ export default function OrganizationDashboard({
         onLogout={onLogout}
     >
         <div className="org-content">
+            {loadError && <p role="alert" className="org-feedback error">{loadError}</p>}
             {error && <p
                 role="alert"
                 className="org-feedback error"
@@ -1234,7 +1239,11 @@ export default function OrganizationDashboard({
                 role="status"
                 className="org-feedback success"
             >{notice}</p>}
-            {!loading && <p className="student-note">{data.academic_period?.label || 'No current academic semester configured'} · Current semester</p>}
+            {!loading && <p className="student-note">{loadError
+                ? 'Academic semester could not be loaded. Retrying automatically.'
+                : data.academic_period
+                    ? `${data.academic_period.label} · Current semester`
+                    : 'No current academic semester configured'}</p>}
             {loading ? <p>Loading organization records…</p> : <Fragment key={data.academic_period?.id || 'none'}>
                 {page === 'dashboard' && <OrganizationOverview
                     accessToken={accessToken}
