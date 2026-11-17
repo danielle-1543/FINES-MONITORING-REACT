@@ -135,7 +135,7 @@ export default function StudentRecord({ studentId, accessToken, onClose, onUpdat
             {!data.fines.length ? <p>No fines recorded for this student.</p> : <div className="org-table"><table className="system-table">
                 <thead><tr><th>Violation / Fine</th><th>Event / Date</th><th className="table-number">Fine</th><th className="table-number">Outstanding</th></tr></thead>
                 <tbody>{data.fines.map(fine => <tr key={fine.fine_key}>
-                    <td>{fine.violation_name}</td><td>{fine.event_name}<small>{fine.recorded_at}</small></td>
+                    <td>{fine.violation_name}{fine.is_carried_balance && <small>Carried balance · {fine.source_academic_period_label}</small>}</td><td>{fine.event_name}<small>{fine.recorded_at}</small></td>
                     <td className="table-number">{money(fine.fine_amount)}</td>
                     <td className="table-number">{money(fine.outstanding)}</td>
                 </tr>)}</tbody>

@@ -82,7 +82,8 @@ export default function OrganizationOverview({
                     <strong>{value}</strong>
                 </article>
             })}</div>
-            <p className="student-note">Totals cover your organization’s permitted students. Attendance totals count records across events. Updates every 30 seconds.</p>
+            <p className="student-note">Records cover the current semester. Fine totals include unpaid balances carried from earlier semesters. Previous records remain in Fine Archives. Updates every 30 seconds.</p>
+            {Number(data.summary.carried_balance) > 0 && <p className="student-note">Remaining balance from previous semesters: <strong>{money(data.summary.carried_balance)}</strong></p>}
             <div className="org-actions">
                 <button onClick={() => {
                     return onNavigate('attendance')

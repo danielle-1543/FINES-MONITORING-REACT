@@ -6,7 +6,7 @@ import CalendarInput from '../../components/CalendarInput'
 import { money } from '../../utils/format'
 import OrganizationOverview from './OrganizationOverview'
 import AccountSettings from '../../components/AccountSettings'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import '../../css/organization/Organization.css'
 import { downloadExcel } from '../../utils/exportExcel'
 import Payments from '../student/Payments'
@@ -162,7 +162,7 @@ function EventForm({
             }
         }}
     >
-        <AcademicPeriodSelect accessToken={accessToken} value={form.academic_period_id || ''} onChange={value => setForm(current => ({ ...current, academic_period_id: value }))} required openOnly defaultCurrent />
+        <AcademicPeriodSelect accessToken={accessToken} value={form.academic_period_id || ''} onChange={value => setForm(current => ({ ...current, academic_period_id: value }))} required openOnly defaultCurrent readOnly />
         <label>Event name<input
             required
             maxLength={150}
@@ -915,9 +915,6 @@ function Records({
     return <section className="org-panel">
         <h2>{kind === 'ATTENDANCE' ? 'Attendance' : 'Violations'}</h2>
         <div className="org-record-filters org-filter-toolbar" role="group" aria-label="Search and filter records">
-            <AcademicPeriodSelect accessToken={accessToken} value={filters.academic_period_id || 'all'} onChange={value => {
-                setFilters(current => ({ ...current, academic_period_id: value })); setPage(1); setLoading(true); setError('')
-            }} includeAll includeLegacy />
             <label className="org-field org-filter-event">Event<select value={eventId} onChange={event => {
                 setEventId(event.target.value); setPage(1); setError(''); setLoading(true); setRecords([])
             }}>
@@ -1153,8 +1150,25 @@ export default function OrganizationDashboard({
     const now = useNow()
     const load = useCallback(async signal => {
         const result = await api('events', accessToken, undefined, signal)
+        if (signal?.aborted) return
         setData(result.data)
+        setSelectedEvent(previous => result.data.events.some(event => String(event.id) === previous) ? previous : '')
     }, [accessToken])
+    useEffect(() => {
+        const controller = new AbortController()
+        const refresh = () => {
+            load(controller.signal).catch(error => {
+                if (error.name !== 'AbortError') setError(error.message)
+            })
+        }
+        const timer = setInterval(refresh, 15000)
+        window.addEventListener('focus', refresh)
+        return () => {
+            controller.abort()
+            clearInterval(timer)
+            window.removeEventListener('focus', refresh)
+        }
+    }, [load])
     useEffect(() => {
         const controller = new AbortController()
         api('events', accessToken, undefined, controller.signal).then(result => {
@@ -1220,7 +1234,8 @@ export default function OrganizationDashboard({
                 role="status"
                 className="org-feedback success"
             >{notice}</p>}
-            {loading ? <p>Loading organization records…</p> : <>
+            {!loading && <p className="student-note">{data.academic_period?.label || 'No current academic semester configured'} · Current semester</p>}
+            {loading ? <p>Loading organization records…</p> : <Fragment key={data.academic_period?.id || 'none'}>
                 {page === 'dashboard' && <OrganizationOverview
                     accessToken={accessToken}
                     username={user.username}
@@ -1236,7 +1251,6 @@ export default function OrganizationDashboard({
                     organization
                 />}
                 {page === 'archives' && <FineArchives accessToken={accessToken} role="ORGANIZATION" />}
-                {page === 'dashboard' && <FineArchives accessToken={accessToken} role="ORGANIZATION" summaryOnly />}
                 {page === 'students' && <StudentRecords
                     accessToken={accessToken}
                     scope={data.scope}
@@ -1283,7 +1297,7 @@ export default function OrganizationDashboard({
                             now={now}
                         />
                     </>}
-            </>}
+            </Fragment>}
         </div>
     </PortalLayout>
 }

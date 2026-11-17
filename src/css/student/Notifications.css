@@ -37,3 +37,66 @@
  .notification-inbox .notification-mark-read { grid-column:2; justify-self:start; margin-top:5px; padding:3px 0; }
  .notification-inbox-pagination { justify-content:space-between; padding:12px 14px; }
 }
+
+/* Full-width student notification workspace. */
+#root .student-content:has(.notification-page) { background: #f6f8f4; }
+#root .notification-page { width: 100%; max-width: none; min-width: 0; padding: 4px 0 20px; }
+#root .notification-page-heading { margin: 0 0 20px; }
+#root .notification-page-heading h2 { margin: 0 0 6px; color: var(--forest); font-size: 1.55rem; font-weight: 650; }
+#root .notification-page-heading p { margin: 0; color: #65705f; font-size: .9rem; line-height: 1.6; }
+#root .notification-overview { display: flex; flex-wrap: wrap; gap: 24px; margin: 0 0 22px; padding: 0; }
+#root .notification-overview > div { display: flex; align-items: baseline; gap: 12px; padding-right: 24px; border-right: 1px solid #dfe5da; }
+#root .notification-overview > div:last-child { border: 0; }
+#root .notification-overview dt { color: #65705f; font-size: .84rem; }
+#root .notification-overview dd { margin: 0; color: var(--forest); font-size: 1.35rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+#root .notification-page .notification-inbox { margin: 0; border: 1px solid #e1e7dc; border-radius: 10px; box-shadow: 0 3px 16px #111c0f05; }
+#root .notification-page .notification-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #e5e9e0; }
+#root .notification-page .notification-inbox-filters { gap: 4px; padding: 0; border: 0; }
+#root .notification-page .notification-inbox-filters button { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 12px; border: 0; background: transparent; color: #596650; font-size: .85rem; }
+#root .notification-page .notification-inbox-filters button[aria-pressed=true] { background: #edf2e8; color: var(--forest); }
+#root .notification-page .notification-inbox-filters button span { font-size: .73rem; font-variant-numeric: tabular-nums; }
+#root .notification-page .notification-inbox-actions button { min-height: 38px; padding: 8px 12px; font-size: .8rem; }
+#root .notification-date-group > h3 { margin: 0; padding: 12px 20px; background: #fafbf8; border-bottom: 1px solid #edf0e8; color: #68735f; font-size: .78rem; font-weight: 600; }
+#root .notification-page .notification-entry { position: relative; padding: 0; border-bottom: 1px solid #e9ede5; background: white; }
+#root .notification-page .notification-entry.is-unread { background: white; box-shadow: inset 3px 0 #547343; }
+#root .notification-detail > summary { display: grid; grid-template-columns: 38px minmax(0, 1fr) 18px; gap: 14px; padding: 20px 22px; cursor: pointer; list-style: none; }
+#root .notification-detail > summary::-webkit-details-marker { display: none; }
+#root .notification-detail > summary:hover { background: #fafcf8; }
+#root .notification-detail > summary:focus-visible { outline: 2px solid #547343; outline-offset: -3px; }
+#root .notification-page .notification-inbox-icon { display: grid; place-items: center; width: 38px; height: 38px; background: #f1f4ec; color: #4e6641; border-radius: 9px; }
+#root .notification-page .notification-inbox-icon svg { width: 21px; height: 21px; }
+#root .notification-page .notification-inbox-title h4 { font-size: .96rem; font-weight: 500; color: #25321e; margin: 0; line-height: 1.5; }
+#root .notification-page .is-unread .notification-inbox-title h4 { font-weight: 650; }
+#root .notification-context { margin: 4px 0 0; color: #526448; font-size: .8rem; line-height: 1.5; }
+#root .notification-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; margin: 6px 0 10px; color: #64705d; font-size: .87rem; line-height: 1.65; }
+#root .notification-item-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; color: #76806f; font-size: .75rem; line-height: 1.5; }
+#root .notification-expand-label { color: #426235; }
+#root .notification-chevron { width: 18px; height: 18px; margin-top: 3px; color: #76806f; transition: transform .15s; }
+#root .notification-detail[open] .notification-chevron { transform: rotate(180deg); }
+#root .notification-detail[open] .notification-expand-label { display: none; }
+#root .notification-detail-body { margin: 0 22px 18px 74px; padding: 16px 0 0; border-top: 1px solid #e5eadd; }
+#root .notification-detail-body h5 { margin: 0 0 8px; font-size: .85rem; color: #304628; }
+#root .notification-detail-body > p { margin: 0 0 16px; font-size: .88rem; line-height: 1.7; overflow-wrap: anywhere; }
+#root .notification-detail-body dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; margin: 0; }
+#root .notification-detail-body dt { font-size: .75rem; color: #75806c; }
+#root .notification-detail-body dd { margin: 4px 0 0; font-size: .85rem; font-weight: 500; overflow-wrap: anywhere; }
+#root .notification-entry-actions { padding: 0 22px 16px 74px; }
+#root .notification-page .notification-mark-read { min-height: 34px; padding: 6px 10px; font-size: .76rem; color: #3c5b30; background: white; border: 1px solid #dbe4d3; border-radius: 6px; }
+#root .notification-page .notification-inbox-pagination { padding: 16px 20px; gap: 12px; }
+#root .notification-page .notification-inbox-pagination > div { display: flex; gap: 8px; }
+#root .notification-page .notification-inbox-empty { padding: 44px 20px; font-size: .9rem; }
+#root .notification-page .notification-inbox-empty p { margin: 8px 0 0; }
+@media (max-width: 650px) {
+    #root .notification-overview { gap: 12px 20px; }
+    #root .notification-overview > div { border: 0; padding: 0; flex-direction: column; gap: 4px; }
+    #root .notification-page .notification-toolbar { padding: 12px; }
+    #root .notification-page .notification-inbox-actions { width: 100%; }
+    #root .notification-page .notification-inbox-actions button { flex: 1; min-height: 44px; }
+    #root .notification-page .notification-inbox-filters button { min-height: 44px; }
+    #root .notification-detail > summary { padding: 16px 14px; grid-template-columns: 32px minmax(0, 1fr) 16px; gap: 10px; }
+    #root .notification-page .notification-inbox-icon { width: 32px; height: 32px; }
+    #root .notification-detail-body { margin: 0 14px 16px; }
+    #root .notification-detail-body dl { grid-template-columns: minmax(0, 1fr); }
+    #root .notification-entry-actions { padding: 0 14px 16px 56px; }
+    #root .notification-page .notification-mark-read { min-height: 44px; }
+}

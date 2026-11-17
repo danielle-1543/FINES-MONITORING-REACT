@@ -109,7 +109,7 @@ export default function StudentPaymentWorkspace({ data, busy, onManualPayment, o
                 <div className="student-table"><table className="system-table">
                     <thead><tr><th>Fine / Event</th><th className="table-number">Original</th><th className="table-number">Reductions</th><th className="table-number">Paid</th><th className="table-number">Remaining</th><th>Status</th></tr></thead>
                     <tbody>{fineResults.rows.map(fine => <tr key={fine.fine_key}>
-                        <td>{fine.violation_name || 'Fine'}<small className="payment-window">{fine.event_name}</small></td>
+                        <td>{fine.violation_name || 'Fine'}<small className="payment-window">{fine.is_carried_balance ? `Carried balance · ${fine.source_academic_period_label}` : fine.event_name}</small></td>
                         <td className="table-number">{money(fine.fine_amount)}</td>
                         <td className="table-number">{money(Number(fine.cap_adjustment || 0) + Number(fine.discount_amount || 0))}</td>
                         <td className="table-number">{money(fine.paid_amount)}</td><td className="table-number">{money(fine.outstanding)}</td>
