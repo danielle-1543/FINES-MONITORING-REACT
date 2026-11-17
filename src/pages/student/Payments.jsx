@@ -9,6 +9,8 @@ import '../../css/student/Payments.css'
 import PaymentSchedules from '../organization/PaymentSchedules'
 import StudentPaymentWorkspace from '../../components/StudentPaymentWorkspace'
 import { paymentPage } from '../../utils/studentPayments'
+import { apiRequest } from '../../utils/apiRequest'
+import { claimMatchesWindow } from '../../utils/paymentClaimWindow'
 export default function Payments({
     accessToken,
     organization = false,
@@ -22,6 +24,16 @@ export default function Payments({
         [busy, setBusy] = useState(false),
         [status, setStatus] = useState('ALL')
     const [historyPage, setHistoryPage] = useState(1)
+    const [windows, setWindows] = useState([])
+    const [windowId, setWindowId] = useState('')
+    useEffect(() => {
+        if (!organization) return
+        const controller = new AbortController()
+        apiRequest('/api/org/payments/periods', accessToken, undefined, controller.signal)
+            .then(result => { if (!controller.signal.aborted) setWindows(result.data) })
+            .catch(error => { if (error.name !== 'AbortError') setError(error.message) })
+        return () => controller.abort()
+    }, [organization, accessToken, version])
     const [syncError, setSyncError] = useState('')
     const [receipt, setReceipt] = useState(null),
         [review, setReview] = useState(null),
@@ -246,7 +258,13 @@ export default function Payments({
         </section>
     }
     const claims = organization ? data : data.claims
-    const history = paymentPage(claims.filter(claim => status === 'ALL' || claim.status === status), historyPage, 10)
+    const selectedWindow = windows.find(window => String(window.id) === windowId)
+    const matchingClaims = claims.filter(claim => {
+        if (status !== 'ALL' && claim.status !== status) return false
+        if (!organization || !windowId) return true
+        return claimMatchesWindow(claim, selectedWindow)
+    })
+    const history = paymentPage(matchingClaims, historyPage, 10)
     return <section className="payment-page">
         <h2>{organization ? 'Payment Claim Review' : 'Payment Management'}</h2>
         {pendingXendit && syncError && <p role="alert" className="account-error">{syncError}</p>}
@@ -261,7 +279,7 @@ export default function Payments({
 
         {organization && <PaymentSchedules
             accessToken={accessToken}
-            onChanged={onChanged}
+            onChanged={() => { setVersion(value => value + 1); onChanged?.() }}
         />}
         {!organization && <StudentPaymentWorkspace key={data.current_academic_period_id || 'no-current-semester'} data={data} busy={busy} requestError={error}
             onManualPayment={body => action('student/payments/submit', body)}
@@ -274,6 +292,13 @@ export default function Payments({
                 }).length}</span>
             })}</div>
             <div className="table-toolbar">
+            {organization && <label>Payment window (submission time)<select value={windowId} onChange={event => {
+                setWindowId(event.target.value)
+                setHistoryPage(1)
+            }}>
+                <option value="">All payment windows</option>
+                {windows.map(window => <option key={window.id} value={window.id}>{window.label} · {date(window.opens_at)} – {date(window.closes_at)}</option>)}
+            </select></label>}
             <label>Claim status <select
                 value={status}
                 onChange={e => {
@@ -292,6 +317,13 @@ export default function Payments({
                 })
             }}
         >Refresh</button>
+            {organization && <button type="button" disabled={busy || !matchingClaims.length} onClick={() => {
+                try {
+                    downloadExcel({ data: matchingClaims.map(claim => ({ ...claim, fine_description: Number(claim.fine_count) > 0 ? `All fines (${claim.fine_count} items)` : claim.fine_key })),
+                        columns: { full_name: 'Student', student_number: 'Student Number', academic_period_label: 'Academic Year / Semester', organization_name: 'Organization', fine_description: 'Fine', amount: 'Amount (PHP)', method: 'Method', reference_number: 'Reference', submitted_at: 'Submitted', reviewed_at: 'Reviewed', status: 'Status', review_note: 'Review Note' }
+                    }, 'payment-claims.xlsx')
+                } catch (error) { setError(error.message || 'Unable to export payment claims.') }
+            }}>Export Excel</button>}
             </div>
             <div className="student-table">
                 <table className="system-table">

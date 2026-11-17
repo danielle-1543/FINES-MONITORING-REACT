@@ -195,11 +195,15 @@
 }
 
 .org-reader {
+    width: 100%;
     max-width: 480px;
     margin: 16px 0;
 }
 
 .org-reader video {
+    display: block;
+    width: 100%;
+    object-fit: contain;
     max-width: 100%;
 }
 

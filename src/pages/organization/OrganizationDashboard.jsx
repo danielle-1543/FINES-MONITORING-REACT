@@ -473,6 +473,9 @@ function EventScanner({
     const [pending, setPending] = useState(false)
     const [cameraBusy, setCameraBusy] = useState(false)
     const [running, setRunning] = useState(false)
+    const [cameras, setCameras] = useState([])
+    const [cameraId, setCameraId] = useState('')
+    const previewHandler = useRef(null)
     const [records, setRecords] = useState([])
     const [recordFilters, setRecordFilters] = useState({ student_number: '', section: '', year_level: '', attendance_status: '' })
     const [loading, setLoading] = useState(true)
@@ -628,27 +631,36 @@ function EventScanner({
         setCameraBusy(true)
         try {
             const {
-                Html5Qrcode
+                Html5Qrcode, Html5QrcodeSupportedFormats
             } = await import('html5-qrcode')
             if (!mounted.current) {
                 return
             }
-            const scanner = new Html5Qrcode('org-qr-reader')
+            if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+                throw new Error('Camera scanning requires HTTPS and a browser with camera support.')
+            }
+            const devices = await Html5Qrcode.getCameras()
+            if (!mounted.current) return
+            setCameras(devices)
+            if (!devices.length) throw new Error('No camera was detected on this device.')
+            const scanner = new Html5Qrcode('org-qr-reader', {
+                formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+                useBarCodeDetectorIfSupported: false,
+                verbose: false
+            })
             reader.current = scanner
-            starting.current = scanner.start({
-                facingMode: 'environment'
-            }, {
-                fps: 10,
-                qrbox: {
-                    width: 250,
-                    height: 250
-                }
+            starting.current = scanner.start(cameraId || { facingMode: 'environment' }, {
+                fps: 10
             }, value => {
-                void preview(value)
+                void previewHandler.current?.(value)
             }, () => { })
             await starting.current
             if (!mounted.current) {
                 return
+            }
+            const video = document.querySelector('#org-qr-reader video')
+            if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+                throw new Error('The camera opened but no video frames arrived. Stop other camera apps and select another camera.')
             }
             setRunning(true)
             setFeedback('Camera started. Point it at a student QR code.')
@@ -674,11 +686,18 @@ function EventScanner({
             setFeedback('Camera stopped.')
         }
     }
+    useEffect(() => {
+        previewHandler.current = preview
+    })
     return <>
         <section className={event ? 'attendance-scanner-controls' : 'org-panel violation-scanner-panel'}>
         {!event && <h2>Violation Scanner</h2>}
         {event ? <p>Scanning: <strong>{windowStatus(event, now)}</strong> · {pht(event.scan_starts_at)} to {pht(event.scan_ends_at)}</p> : <p>Scan a student and choose one or more violations. Available with or without an attendance event.</p>}
         <div className="org-actions">
+            {cameras.length > 0 && <label>Camera<select value={cameraId} disabled={running || cameraBusy} onChange={event => setCameraId(event.target.value)}>
+                <option value="">Automatic rear camera</option>
+                {cameras.map((camera, index) => <option key={camera.id} value={camera.id}>{camera.label || `Camera ${index + 1}`}</option>)}
+            </select></label>}
             <button
                 onClick={startCamera}
                 disabled={cameraBusy || running || !accepting}

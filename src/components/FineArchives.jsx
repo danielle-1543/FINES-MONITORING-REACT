@@ -11,18 +11,19 @@ export default function FineArchives({ accessToken, role = 'STUDENT', summaryOnl
     const [student, setStudent] = useState(''), [page, setPage] = useState(1), [paymentPage, setPaymentPage] = useState(1)
     const [search, setSearch] = useState(''), [summaryPage, setSummaryPage] = useState(1)
     const [result, setResult] = useState(null), [error, setError] = useState(''), [exporting, setExporting] = useState(false)
-    const query = new URLSearchParams({ academic_period_id: period || '0', status, page, payment_page: paymentPage, search }).toString()
+    const query = new URLSearchParams({ academic_period_id: period || 'all', status, page, payment_page: paymentPage, search }).toString()
     useEffect(() => {
         const timer = setTimeout(() => { setSearch(student.trim()); setPage(1); setPaymentPage(1); setSummaryPage(1) }, 300)
         return () => clearTimeout(timer)
     }, [student])
     useEffect(() => {
         const controller = new AbortController()
+        if (role === 'ORGANIZATION' && !period) return () => controller.abort()
         apiRequest(`/api/fine-archives?${query}`, accessToken, undefined, controller.signal).then(response => {
             if (!controller.signal.aborted) { setResult(response.data); setError('') }
         }).catch(error => { if (error.name !== 'AbortError') setError(error.message) })
         return () => controller.abort()
-    }, [query, accessToken])
+    }, [query, accessToken, role, period])
     function choose(value) { setPeriod(value); setPage(1); setPaymentPage(1); setSummaryPage(1) }
     async function exportSemesterSummary(row) {
         setExporting(true); setError('')
@@ -49,7 +50,7 @@ export default function FineArchives({ accessToken, role = 'STUDENT', summaryOnl
         <h2>{summaryOnly ? 'Semester fine summary' : 'Fine Archives'}</h2>
         <p>Records remain in their original academic semester after profile changes and payment. Legacy records stay unassigned until reviewed by the administrator.</p>
         <div className="payment-actions table-toolbar">
-            <AcademicPeriodSelect accessToken={accessToken} value={period} onChange={choose} includeAll includeLegacy defaultCurrent />
+            <AcademicPeriodSelect accessToken={accessToken} value={period} onChange={choose} includeAll={role !== 'ORGANIZATION'} includeLegacy={role !== 'ORGANIZATION'} defaultCurrent />
             {!summaryOnly && <label>Fine status<select value={status} onChange={event => { setStatus(event.target.value); setPage(1) }}>
                 {['ALL', 'UNPAID', 'PARTIALLY_PAID', 'PAID', 'SETTLED'].map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select></label>}
             {role !== 'STUDENT' && <label>Search student<input type="search" maxLength={150} placeholder="Student ID, name or section" value={student} onChange={event => setStudent(event.target.value)} /></label>}
