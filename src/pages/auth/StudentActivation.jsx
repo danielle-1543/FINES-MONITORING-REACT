@@ -49,6 +49,8 @@ export default function StudentActivation({
     })
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
+    const [cameraBusy, setCameraBusy] = useState(false)
+    const [running, setRunning] = useState(false)
     const [cameraStatus, setCameraStatus] = useState('')
     const camera = useRef(null)
     const cameraToken = useRef(0)
@@ -60,22 +62,24 @@ export default function StudentActivation({
         cameraToken.current += 1
         const handle = camera.current
         camera.current = null
-        if (handle) {
-            await handle.stop()
+        if (!handle) {
+            return
         }
+        await handle.stop()
         if (mounted.current) {
+            setRunning(false)
+            setCameraBusy(false)
             setCameraStatus('')
         }
     }, [])
     const startCamera = useCallback(async () => {
-        if (!mounted.current || camera.current) {
+        if (!mounted.current || camera.current || cameraBusy) {
             return
         }
         const token = ++cameraToken.current
         decoded.current = false
-        if (mounted.current) {
-            setCameraStatus('Starting camera…')
-        }
+        setCameraBusy(true)
+        setCameraStatus('Starting camera…')
         try {
             const handle = await startQrCamera({
                 containerId: 'activation-reader',
@@ -95,25 +99,26 @@ export default function StudentActivation({
                 return
             }
             camera.current = handle
+            setRunning(true)
             setCameraStatus('Camera ready. Point it at your QR code.')
         } catch (err) {
             if (token === cameraToken.current && mounted.current) {
                 setCameraStatus('')
                 setError(err.message || String(err))
             }
+        } finally {
+            if (mounted.current) {
+                setCameraBusy(false)
+            }
         }
-    }, [])
+    }, [cameraBusy])
     useEffect(() => {
         mounted.current = true
-        const timer = setTimeout(() => {
-            void startCamera()
-        }, 0)
         return () => {
             mounted.current = false
-            clearTimeout(timer)
             void stopCamera()
         }
-    }, [startCamera, stopCamera])
+    }, [stopCamera])
     async function identify(token) {
         setBusy(true)
         setError('')
@@ -237,6 +242,19 @@ export default function StudentActivation({
             >{error}</p>}
             {!student ? <>
                 <h2>Scan your assigned QR code</h2>
+                <div className="account-actions">
+                    <button
+                        type="button"
+                        disabled={busy || cameraBusy || running}
+                        onClick={startCamera}
+                    >{cameraBusy && !running ? 'Starting Camera…' : 'Start Camera'}</button>
+                    <button
+                        type="button"
+                        className="secondary"
+                        disabled={cameraBusy || !running}
+                        onClick={stopCamera}
+                    >Stop Camera</button>
+                </div>
                 <p role="status" aria-live="polite" className="account-camera-status">{cameraStatus}</p>
                 <div
                     id="activation-reader"
