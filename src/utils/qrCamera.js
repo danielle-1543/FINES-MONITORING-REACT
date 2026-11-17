@@ -52,6 +52,32 @@ function waitForVideoElement(video) {
     })
 }
 
+function addQrBox(container) {
+    container.style.position = 'relative'
+    const overlay = document.createElement('div')
+    Object.assign(overlay.style, {
+        position: 'absolute',
+        inset: '0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'none',
+        zIndex: '2'
+    })
+    const frame = document.createElement('div')
+    Object.assign(frame.style, {
+        width: 'min(70%, 280px)',
+        aspectRatio: '1 / 1',
+        border: '3px solid #7CFF6B',
+        borderRadius: '14px',
+        boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.45)',
+        boxSizing: 'border-box'
+    })
+    overlay.appendChild(frame)
+    container.appendChild(overlay)
+    return overlay
+}
+
 function styleVideo(video) {
     video.muted = true
     video.playsInline = true
@@ -79,14 +105,23 @@ async function startNativeCamera({ containerId, onScan }) {
     const video = document.createElement('video')
     styleVideo(video)
     container.replaceChildren(video)
-    const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: { ideal: 'environment' } }
-    })
-    video.srcObject = stream
-    const playing = video.play()
-    if (playing?.catch) playing.catch(() => { })
-    await waitForVideoElement(video)
+    const overlay = addQrBox(container)
+    let stream
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: { ideal: 'environment' } }
+        })
+        video.srcObject = stream
+        const playing = video.play()
+        if (playing?.catch) playing.catch(() => { })
+        await waitForVideoElement(video)
+    } catch (error) {
+        stream?.getTracks().forEach(track => track.stop())
+        video.remove()
+        overlay.remove()
+        throw error
+    }
     let stopped = false
     let frame
     let lastScan = 0
@@ -117,6 +152,7 @@ async function startNativeCamera({ containerId, onScan }) {
             cancelAnimationFrame(frame)
             stream.getTracks().forEach(track => track.stop())
             video.remove()
+            overlay.remove()
         }
     }
 }
@@ -173,6 +209,7 @@ export async function startQrCamera({ containerId, onScan, formatsToSupport, qrb
                 styleVideo(video)
                 await waitForVideoElement(video)
             }
+            const overlay = addQrBox(container)
             let stopped = false
             return {
                 reader,
@@ -181,6 +218,7 @@ export async function startQrCamera({ containerId, onScan, formatsToSupport, qrb
                         return
                     }
                     stopped = true
+                    overlay.remove()
                     await release(reader)
                 }
             }

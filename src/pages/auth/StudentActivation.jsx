@@ -79,7 +79,6 @@ export default function StudentActivation({
         try {
             const handle = await startQrCamera({
                 containerId: 'activation-reader',
-                qrbox: { width: 230, height: 230 },
                 onScan: value => {
                     if (decoded.current || !mounted.current) {
                         return
