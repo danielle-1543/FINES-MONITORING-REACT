@@ -1,8 +1,9 @@
 import AcademicPeriodSelect from '../../components/AcademicPeriodSelect'
 import { apiFetch } from '../../utils/apiFetch'
 import CalendarInput from '../../components/CalendarInput'
-import { useEffect, useState } from 'react'
-import { confirmSensitive } from '../../utils/confirmation'
+import { useEffect, useRef, useState } from 'react'
+import { askConfirmation, confirmSensitive } from '../../utils/confirmation'
+import { apiRequest } from '../../utils/apiRequest'
 const emptySchedule = {
     label: '',
     academic_period_id: '',
@@ -21,6 +22,37 @@ export default function PaymentSchedules({
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
     const [version, setVersion] = useState(0)
+    const deleteLock = useRef(false)
+    async function deleteWindow(period) {
+        if (busy || deleteLock.current) return
+        deleteLock.current = true
+        setBusy(true)
+        setError('')
+        setMessage('')
+        try {
+            const confirmed = await askConfirmation({
+                title: 'Delete payment window?',
+                message: `${period.label}: ${period.opens_at} to ${period.closes_at}`,
+                note: 'Only unused future windows can be removed. Existing financial rules are protected. Already delivered announcements cannot be recalled.',
+                confirmLabel: 'Delete Payment Window'
+            })
+            if (!confirmed) return
+            const result = await apiRequest('/api/org/payments/periods/delete', accessToken, { id: period.id })
+            setPeriods(current => current.filter(item => item.id !== period.id))
+            if (form.id === period.id) {
+                setEditing(false)
+                setForm(emptySchedule)
+            }
+            setMessage(result.message)
+            setVersion(value => value + 1)
+            onChanged?.()
+        } catch (reason) {
+            setError(reason.message || 'Unable to delete payment window. Please try again.')
+        } finally {
+            deleteLock.current = false
+            setBusy(false)
+        }
+    }
     useEffect(() => {
         const controller = new AbortController()
         apiFetch('/api/org/payments/periods', {
@@ -99,6 +131,7 @@ export default function PaymentSchedules({
         >{message}</p>}
         {!editing && <button
             type="button"
+            disabled={busy}
             onClick={() => {
                 setForm(emptySchedule)
                 setEditing(true)
@@ -182,6 +215,9 @@ export default function PaymentSchedules({
                                     setEditing(true)
                                 }}
                             >Edit Payment Window</button>
+                            <button type="button" disabled={busy} onClick={() => deleteWindow(period)}>
+                                Delete Payment Window
+                            </button>
                         </td>
                     </tr>
                 })}</tbody>
